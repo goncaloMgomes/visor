@@ -36,8 +36,8 @@ Events (`--event`) also put a message in the speech balloon:
 | Event | Default mood | Balloon |
 |---|---|---|
 | `start` | thinking | nothing; it marks when a turn started |
-| `stop` | done | "*title* is done: *text*". Turns under 20 s after their `start` (same `--sid`) aren't announced |
-| `ask` | input | "*title* needs your approval" |
+| `stop` | done | "*title* is done ✓". Turns under 20 s after their `start` (same `--sid`) aren't announced |
+| `ask` | input | "*title* needs you" |
 | `error` | error | "*title* hit an error" |
 
 The variable `VISOR_QUIET=1` makes `visor signal` do nothing. The robot sets it on its own background AI calls so they don't move the face.

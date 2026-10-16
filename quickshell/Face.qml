@@ -121,11 +121,12 @@ Item {
 
     function stroke(dx) { petEnergy = Math.min(3, petEnergy + Math.abs(dx) / 60) }
 
-    onHoveredChanged: {
-        if (!hovered) petLinger.restart()
-        else if (remoteOn) remark("pet", null)
-    }
+    onHoveredChanged: if (!hovered) petLinger.restart()
     onPettingChanged: apply()
+    // only real petting (stroking it back and forth) may get a comment, never
+    // just passing over it
+    readonly property bool stroked: petting && petEnergy > 0.6
+    onStrokedChanged: if (stroked) remark("pet", null)
     onPurringChanged: { apply(); if (purring) remark("purr", null) }
     onHandXChanged: if (petting) { lookX = handX * 1.2; lookY = -0.3 }
 

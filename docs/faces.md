@@ -119,13 +119,13 @@ A white cartoon speech bubble with an ink outline and a tail pointing at the rob
 |---|---|
 | **Boot / unlock** (with a weather city set, at most every 3 h) | "Good afternoon, Sam! ☀️ Sunny and 22°C in Lisbon! Sunglasses on 😎" |
 | **Unlock** with news | "Welcome back! While you were away, “Fix the login bug” finished." |
-| **Answer ready** (a turn that took 20 s or more) | "“Refactor parser” is done: I split the tokenizer into…" |
-| **Needs approval** | "“Deploy script” needs your approval. Click me to have a look." |
-| **Error** | "“…” hit an error. Click me to have a look." |
+| **Answer ready** (a turn that took 20 s or more) | "“Refactor parser” is done ✓" |
+| **Needs approval** | "“Deploy script” needs you" (click the balloon to open it) |
+| **Error** | "“…” hit an error" |
 | **Charger / battery** | "Power snack time! 64% and climbing.", "Mayday, mayday! 5% battery!" |
 | **Wi-Fi, Bluetooth, USB, keep-awake** | "Wi-Fi's back! Hello, internet 🌐", "Ooh, WH-1000XM4 connected! 🎧" |
 | **Music starts** (after 2 min of silence) | "🎶 Ooh, “Get Lucky” by Daft Punk! Good taste." |
-| **Late at night**, **petting**, **purring** | "Night owl mode activated.", "Boop!", "Purrrrr… 💕" |
+| **Late at night**, **petting**, **purring** | "Night owl mode activated.", "Boop!", "Purrrrr… 💕" (only when you actually stroke it, and rarely: at most once an hour) |
 
 **AI-written lines.** With `features.remarks` on, every 2.5 hours (and when the weather changes) `backend/remarks.py` asks the configured AI for a fresh pool of lines per kind of event, knowing the time of day and the weather. Without it, or if the pool is older than 8 hours, the robot uses its hand-written lines.
 

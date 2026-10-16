@@ -47,6 +47,7 @@ PanelWindow {
 
     // how long a finished message stays up, relative to the `ms` asked for
     readonly property real holdScale: 0.45
+    readonly property real typeSpeed: 1.5   // 1 = the original pace
 
     function say(text, opts) {
         const o = opts || {}
@@ -111,8 +112,8 @@ PanelWindow {
         }
     }
 
-    // Human-ish typing: ~34 ms a letter with some jitter, a little longer
-    // after spaces, and real pauses after punctuation.
+    // Human-ish typing: ~23 ms a letter with some jitter, a little longer
+    // after spaces, and real pauses after punctuation (all divided by typeSpeed).
     Timer {
         id: typeTimer
         onTriggered: {
@@ -146,7 +147,7 @@ PanelWindow {
             if (c === " ") ms += 15
             else if (c === "," || c === ";" || c === ":") ms += 110
             else if (c === "." || c === "!" || c === "?" || c === "…") ms += 230
-            interval = ms
+            interval = Math.round(ms / balloon.typeSpeed)
             restart()
         }
     }

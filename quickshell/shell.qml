@@ -691,12 +691,12 @@ ShellRoot {
     function quip(kind, info) {
         if (locked || !faceWin.visible || chat.open) return
         const gap = { plugged: 120, unplugged: 120, battery: 0, late: 3600,
-                      pet: 900, purr: 600, music: 600, wifiOn: 300, wifiOff: 300, btOn: 300, btOff: 300,
+                      pet: 3600, purr: 1800, music: 600, wifiOn: 300, wifiOff: 300, btOn: 300, btOff: 300,
                       btDevice: 600, usb: 300, coffeeOn: 120, coffeeOff: 120 }[kind]
         if (gap === undefined) return
         const now = Date.now() / 1000
         if (lastQuip[kind] && now - lastQuip[kind] < gap) return
-        if (kind === "pet" && Math.random() > 0.35) return   // don't comment on every pat
+        if ((kind === "pet" || kind === "purr") && Math.random() > 0.25) return   // don't comment on every pat
         lastQuip[kind] = now
         const n = info
         let text = aiLine(kind, info)
@@ -915,13 +915,13 @@ ShellRoot {
         if (e.kind === "stop" && locked) { awayTitles = awayTitles.concat([s.title]); return }
         // clicking it opens the chat in the popup when the popup's backend owns it
         const mine = e.transcript && (!e.source || e.source === backend.id)
-        const q = "\u201c" + s.title + "\u201d"
-        const snippet = s.last.length > 90 ? s.last.substring(0, 88).replace(/\s+\S*$/, "") + "\u2026" : s.last
-        const look = mine ? " Click me to have a look." : ""
-        const text = e.kind === "stop" ? q + " is done" + (snippet ? ": " + snippet : "!")
-                   : e.kind === "ask" ? q + " needs your approval." + look
-                   : q + " hit an error." + look
-        balloon.say(text, { ms: e.kind === "ask" ? 12000 : 8000, action: mine ? e.transcript : "" })
+        // short: the title (cut to ~40 characters) and what happened
+        const t = s.title.length > 40 ? s.title.substring(0, 38).replace(/\s+\S*$/, "") + "\u2026" : s.title
+        const q = "\u201c" + t + "\u201d"
+        const text = e.kind === "stop" ? q + " is done \u2713"
+                   : e.kind === "ask" ? q + " needs you"
+                   : q + " hit an error"
+        balloon.say(text, { ms: e.kind === "ask" ? 10000 : 6000, action: mine ? e.transcript : "" })
     }
 
     PanelWindow {
