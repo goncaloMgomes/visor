@@ -116,6 +116,45 @@ def load_config():
     return cfg
 
 
+def set_option(key, value):
+    """Set one setting (dotted key, e.g. "chat.model") in the user's config file.
+
+    Only that key is written, the rest of the file is kept as it is; None removes
+    the key (back to the default). Unknown keys are refused.
+    """
+    path = key.split(".")
+    d = DEFAULTS
+    for k in path:
+        if not isinstance(d, dict) or k not in d:
+            raise KeyError(key)
+        d = d[k]
+    try:
+        with open(CONFIG_FILE) as f:
+            user = json.load(f)
+    except FileNotFoundError:
+        user = {}
+    node = user
+    for k in path[:-1]:
+        node = node.setdefault(k, {})
+    if value is None:
+        node.pop(path[-1], None)
+    else:
+        node[path[-1]] = value
+    os.makedirs(os.path.dirname(CONFIG_FILE), exist_ok=True)
+    tmp = CONFIG_FILE + ".tmp"
+    with open(tmp, "w") as f:
+        json.dump(user, f, indent=2, ensure_ascii=False)
+        f.write("\n")
+    os.replace(tmp, CONFIG_FILE)
+
+
+def themes():
+    try:
+        return sorted(f[:-5] for f in os.listdir(THEMES_DIR) if f.endswith(".json"))
+    except OSError:
+        return ["linear"]
+
+
 def load_theme(name, overrides=None):
     theme = {}
     if name in ("", "auto", None):

@@ -2,6 +2,7 @@
 """The robot's helper: settings, and the chat popup's link to the AI.
 
   chat.py info                     JSON: merged settings, backend info, theme, environment
+  chat.py set <key> <json>         change one setting in config.json (dotted key; null = default)
   chat.py sessions                 JSON list of recent chats
   chat.py bridge <session|new> <cwd> <model> <fork 0|1> [mode]
                                    run a chat (protocol in docs/PROTOCOL.md)
@@ -19,7 +20,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from common import CONFIG_FILE, load_config, load_theme, power_supplies  # noqa: E402
+from common import CONFIG_FILE, load_config, load_theme, power_supplies, set_option, themes  # noqa: E402
 import backends  # noqa: E402
 
 
@@ -46,6 +47,7 @@ def info(cfg):
         "configFile": CONFIG_FILE,
         "backend": be,
         "theme": load_theme(cfg.get("theme"), cfg.get("themeOverrides")),
+        "themes": themes(),
         "reducedMotion": bool(cfg.get("reducedMotion")) or not desktop_animations(),
         "power": {"battery": bat if p.get("battery") in ("", "auto", None) else p["battery"],
                   "ac": ac if p.get("ac") in ("", "auto", None) else p["ac"]},
@@ -60,6 +62,12 @@ def info(cfg):
 def main():
     a = sys.argv[1:]
     cmd = a[0] if a else ""
+    if cmd == "set" and len(a) == 3:
+        try:
+            set_option(a[1], json.loads(a[2]))
+        except (KeyError, ValueError, OSError) as e:
+            sys.exit(f"visor: can't set {a[1]}: {e}")
+        return
     cfg = load_config()
     if cmd == "info":
         print(json.dumps(info(cfg)))

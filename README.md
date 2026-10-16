@@ -64,7 +64,7 @@ To start it with your desktop, use `systemctl --user enable --now visor.service`
 | `features` | `weather`, `remarks` (AI-written balloon lines) |
 | `night`, `idleSeconds`, `lockers`, `power` | sleepy hours, the away timer, screen lockers to watch for, battery names (`auto`) |
 
-The weather city and the speech balloons switch are in the right-click menu. Changes to the config file apply right away.
+The weather city, the speech balloons switch and a **Settings** page for the everyday options are in the right-click menu (`visor` writes those back to the config file). Changes to the config file apply right away.
 
 ## Themes
 

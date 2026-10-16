@@ -194,6 +194,14 @@ ShellRoot {
         balloonsOn: shell.balloonsOn
         onCitySet: name => shell.setCity(name)
         onBalloonsSet: on => shell.setBalloons(on)
+        cfg: shell.cfg
+        backendInfo: shell.backend
+        themes: shell.info?.themes ?? []
+        // written to config.json, which is watched: the change comes back through `chat.py info`
+        onConfigSet: (key, value) => Quickshell.execDetached([shell.helper, "set", key, JSON.stringify(value)])
+        onConfigFileRequested: Quickshell.execDetached(["sh", "-c",
+            'mkdir -p "$(dirname "$1")"; [ -e "$1" ] || echo "{}" > "$1"; exec xdg-open "$1"', "sh",
+            shell.info?.configFile ?? ""])
     }
     HyprlandFocusGrab {
         active: shell.hypr && remoteMenu.open

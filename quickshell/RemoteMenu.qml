@@ -3,8 +3,9 @@ import Quickshell.Io
 import QtQuick
 
 // Right-click menu on the robot: the robot's settings (speech balloons on/off,
-// the city for the weather) and, when a service is configured, its state with
-// Start / Restart / Stop (Restart and Stop ask for a second click).
+// the city for the weather, and a Settings page for config.json, SettingsPage.qml)
+// and, when a service is configured, its state with Start / Restart / Stop
+// (Restart and Stop ask for a second click).
 PopupWindow {
     id: menu
 
@@ -24,6 +25,14 @@ PopupWindow {
     signal citySet(string name)
     signal balloonsSet(bool on)
 
+    // the Settings page
+    property string page: "main"          // "main" | "settings"
+    property var cfg: ({})
+    property var backendInfo: ({})
+    property var themes: []
+    signal configSet(string key, var value)
+    signal configFileRequested()
+
     property string armed: ""            // "stop" | "restart" waiting for the 2nd click
     property int sessions: -1
     property string since: ""
@@ -33,13 +42,14 @@ PopupWindow {
     readonly property real pad: 14
     visible: open
     color: "transparent"
-    implicitWidth: 236 + 2 * pad
+    implicitWidth: 260 + 2 * pad
     implicitHeight: box.height + 2 * pad
 
     onOpenChanged: {
         if (open) enter.restart()
         armed = ""
         editing = false
+        page = "main"
         if (open && unit && !info.running) info.running = true
     }
     onEditingChanged: if (editing) { cityInput.text = city; cityInput.selectAll(); cityInput.forceActiveFocus() }
@@ -72,7 +82,7 @@ PopupWindow {
         id: box
         x: menu.pad; y: menu.pad
         width: menu.implicitWidth - 2 * menu.pad
-        height: col.implicitHeight + 12
+        height: (menu.page === "settings" ? settings.implicitHeight : col.implicitHeight) + 12
         Ambient { anchors.fill: parent; running: menu.open }
         Spotlight {}
         Rectangle {   // hairline border
@@ -83,9 +93,24 @@ PopupWindow {
             border.color: Style.line
         }
 
+        SettingsPage {
+            id: settings
+            x: 6; y: 6
+            width: parent.width - 12
+            visible: menu.page === "settings"
+            active: visible
+            cfg: menu.cfg
+            backend: menu.backendInfo
+            themes: menu.themes
+            onSetValue: (key, value) => menu.configSet(key, value)
+            onBack: menu.page = "main"
+            onOpenFile: { menu.open = false; menu.configFileRequested() }
+        }
+
         Column {
             id: col
             x: 6; y: 6
+            visible: menu.page === "main"
             width: parent.width - 12
             spacing: 2
 
@@ -258,6 +283,42 @@ PopupWindow {
                     hoverEnabled: true
                     cursorShape: Qt.IBeamCursor
                     onClicked: menu.editing = true
+                }
+            }
+
+            Rectangle { width: col.width; height: 1; color: Style.line }
+
+            // → the Settings page
+            Rectangle {
+                width: col.width
+                height: 32
+                radius: Style.controlRadius
+                color: settingsHover.containsMouse ? Style.surface : "transparent"
+                Text {
+                    id: sIc
+                    x: 8; width: 18
+                    anchors.verticalCenter: parent.verticalCenter
+                    horizontalAlignment: Text.AlignHCenter
+                    text: "⚙"
+                    color: Style.muted
+                    font.family: Style.sans; font.pixelSize: 14
+                }
+                Text {
+                    anchors { left: sIc.right; leftMargin: 8; verticalCenter: parent.verticalCenter }
+                    text: "Settings"
+                    color: Style.fg; font.family: Style.sans; font.pixelSize: 13
+                }
+                Text {
+                    anchors { right: parent.right; rightMargin: 10; verticalCenter: parent.verticalCenter }
+                    text: "›"
+                    color: Style.muted; font.family: Style.sans; font.pixelSize: 16
+                }
+                MouseArea {
+                    id: settingsHover
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: { menu.editing = false; menu.page = "settings" }
                 }
             }
         }

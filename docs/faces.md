@@ -136,6 +136,7 @@ A white cartoon speech bubble with an ink outline and a tail pointing at the rob
 - **Speech balloons** on/off.
 - **Weather city**: type "City, Country" and press Enter. Weather comes from [wttr.in](https://wttr.in); without a city there's none.
 - With a service configured: its status, and **Start / Restart / Stop** (Restart and Stop ask for a second click).
+- **Settings**: the everyday options of `config.json` (name, theme, AI and model, permissions, computer use, screen sharing, the chat folder, weather and remarks, the service…). Toggles flip on click, lists open below their row, and text and numbers are typed in and saved with Enter. Each change is written to `config.json` right away, keeping the rest of the file as it is. **Open config.json…** at the bottom is for everything else.
 
 ---
 
