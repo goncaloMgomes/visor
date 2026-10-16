@@ -37,6 +37,10 @@ def main():
     tool("curl", "weather")
     tool("udevadm", "battery/charger and USB reactions")
     tool("brightnessctl", "brightness reactions (scripts/sysevent.sh)")
+    if shutil.which("fc-list"):
+        import subprocess
+        has_inter = "Inter" in subprocess.run(["fc-list", ":", "family"], capture_output=True, text=True).stdout
+        line(OK if has_inter else WARN, "Inter font" if has_inter else "Inter font not found: the popups fall back to the default sans")
 
     print("Desktop")
     hypr = bool(os.environ.get("HYPRLAND_INSTANCE_SIGNATURE"))

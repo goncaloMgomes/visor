@@ -21,8 +21,10 @@ DEFAULTS = {
     # which AI the chat popup talks to: "claude-code" or "openai"
     # (any OpenAI-compatible API: OpenAI, OpenRouter, Gemini, Ollama, LM Studio, llama.cpp…)
     "backend": "claude-code",
-    # chat popup look: "auto" (the backend's own), "neutral", "claude", or a file in themes/
-    "theme": "auto",
+    # chat popup look: "linear" (default), "claude", or a path to your own theme JSON
+    "theme": "linear",
+    # turn off animations (also on when the desktop's "enable-animations" setting is off)
+    "reducedMotion": False,
     "themeOverrides": {},
 
     "chat": {
@@ -116,7 +118,9 @@ def load_config():
 
 def load_theme(name, overrides=None):
     theme = {}
-    for n in ("neutral", name):   # every theme starts from neutral, so a theme may set only a few keys
+    if name in ("", "auto", None):
+        name = "linear"
+    for n in ("linear", name):   # every theme starts from linear, so a theme may set only a few keys
         path = n if os.sep in str(n) else os.path.join(THEMES_DIR, f"{n}.json")
         try:
             with open(os.path.expanduser(path)) as f:

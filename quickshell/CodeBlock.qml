@@ -12,15 +12,15 @@ Rectangle {
     property bool expanded: false
     property bool copied: false
 
-    readonly property color dim: "#9c9a92"
-    readonly property string mono: "CaskaydiaMono NFM"
+    readonly property color dim: Style.muted
+    readonly property string mono: Style.mono
     readonly property int lines: code === "" ? 0 : code.split("\n").length
     readonly property bool long: lines > maxLines
 
-    radius: 10
-    color: "#1c1b19"
+    radius: Style.controlRadius + 2
+    color: Style.codeBg
     border.width: 1
-    border.color: "#26dedcd1"
+    border.color: Style.line
     height: head.height + clipper.height + (long ? more.height : 8)
 
     // header: language + copy
@@ -30,16 +30,17 @@ Rectangle {
         height: 26
         Text {
             anchors { left: parent.left; leftMargin: 10; verticalCenter: parent.verticalCenter }
-            text: cb.lang || "code"
+            text: (cb.lang || "code").toUpperCase()
             color: cb.dim
-            font.family: cb.mono; font.pixelSize: 10
+            font.family: cb.mono; font.pixelSize: 9; font.letterSpacing: 1.2
         }
         Text {
             id: copy
             anchors { right: parent.right; rightMargin: 10; verticalCenter: parent.verticalCenter }
             text: cb.copied ? "Copied" : "Copy"
-            color: copyArea.containsMouse ? "#faf9f5" : cb.dim
-            font.family: "Noto Sans"; font.pixelSize: 10
+            color: copyArea.containsMouse ? Style.fg : cb.dim
+            Behavior on color { ColorMotion {} }
+            font.family: Style.sans; font.pixelSize: 10
             MouseArea {
                 id: copyArea
                 anchors { fill: parent; margins: -6 }
@@ -73,10 +74,10 @@ Rectangle {
             wrapMode: TextEdit.Wrap
             textFormat: TextEdit.RichText
             text: cb.highlight(cb.code, cb.lang)
-            color: "#e8e6dc"
+            color: Style.fg
             font.family: cb.mono; font.pixelSize: 11
-            selectionColor: "#66d97757"
-            selectedTextColor: "#faf9f5"
+            selectionColor: Style.alpha(Style.accent, 0.4)
+            selectedTextColor: Style.fg
         }
 
         Rectangle {   // fade the folded bottom edge
@@ -84,8 +85,8 @@ Rectangle {
             anchors { left: parent.left; right: parent.right; bottom: parent.bottom }
             height: 18
             gradient: Gradient {
-                GradientStop { position: 0; color: "#001c1b19" }
-                GradientStop { position: 1; color: "#1c1b19" }
+                GradientStop { position: 0; color: Style.alpha(Style.codeBg, 0) }
+                GradientStop { position: 1; color: Style.codeBg }
             }
         }
     }
@@ -98,8 +99,8 @@ Rectangle {
         height: 24
         verticalAlignment: Text.AlignVCenter
         text: cb.expanded ? "Show less" : "Show " + (cb.lines - cb.maxLines) + " more lines"
-        color: moreArea.containsMouse ? "#e08a6d" : "#d97757"
-        font.family: "Noto Sans"; font.pixelSize: 10
+        color: moreArea.containsMouse ? Style.accentHi : Style.accent
+        font.family: Style.sans; font.pixelSize: 10
         MouseArea {
             id: moreArea
             anchors.fill: parent
@@ -129,7 +130,7 @@ Rectangle {
             shell ? "((?:^|(?=[ \\t]))[ \\t]--?[A-Za-z][\\w-]*)" : never,                  // 5 flag
             "(\\b(?:" + kw + ")\\b)"                                                          // 6 keyword
         ].join("|"), "gm")
-        const colors = [null, "#87857d", "#a9c98d", "#e5c07b", "#e0a370", "#86b8d6", "#c4a7e7"]
+        const colors = [null, Style.hex(Style.muted), "#a9c98d", "#e5c07b", "#e0a370", "#86b8d6", "#c4a7e7"]
         let out = "", last = 0, m
         while ((m = re.exec(src)) !== null) {
             if (m[0] === "") { re.lastIndex++; continue }

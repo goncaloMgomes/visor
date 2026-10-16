@@ -23,7 +23,7 @@ All the faces and what triggers them: [docs/faces.md](docs/faces.md).
 
 ## Install
 
-Needs a Wayland compositor with layer-shell (Hyprland, Sway, niri, river, Plasma…), [Quickshell](https://quickshell.org) and Python 3. Optional: `jq` (Claude Code hook), `grim` (screenshots), `curl` (weather), `brightnessctl`, and `wtype` (computer use).
+Needs a Wayland compositor with layer-shell (Hyprland, Sway, niri, river, Plasma…), [Quickshell](https://quickshell.org) and Python 3. Optional: the Inter font (`inter-font` on Arch), `jq` (Claude Code hook), `grim` (screenshots), `curl` (weather), `brightnessctl`, and `wtype` (computer use).
 
 ```sh
 git clone https://github.com/goncalomgomes/visor && cd visor
@@ -54,7 +54,8 @@ To start it with your desktop, use `systemctl --user enable --now visor.service`
 |---|---|
 | `name` | your name in greetings |
 | `backend` | `claude-code` or `openai` (configure it under `backends.openai`, see [PROTOCOL.md](docs/PROTOCOL.md#included)) |
-| `theme` | `auto` (the backend's own), `neutral`, `claude`, or a path to your own JSON (see `themes/`); `themeOverrides` changes single colours |
+| `theme` | `linear` (default: near-black glass, indigo ambient light, layered shadows), `claude`, or a path to your own JSON (see [Themes](#themes)); `themeOverrides` changes single tokens |
+| `reducedMotion` | turn animations off (also automatic when the desktop's "enable animations" setting is off) |
 | `chat.permissionMode` | Claude Code's mode for popup chats: `default` asks before acting, `acceptEdits`, `auto`, `plan` |
 | `chat.computerUse` | let the chat AI drive the desktop (Hyprland, opt-in) |
 | `chat.shareScreen` | take a screenshot when the popup opens (the chip in the composer turns it off per message) |
@@ -63,6 +64,10 @@ To start it with your desktop, use `systemctl --user enable --now visor.service`
 | `night`, `idleSeconds`, `lockers`, `power` | sleepy hours, the away timer, screen lockers to watch for, battery names (`auto`) |
 
 The weather city and the speech balloons switch are in the right-click menu. Changes to the config file apply right away.
+
+## Themes
+
+The popups are styled entirely from design tokens: colours, fonts, radii, which effects are on, and the light pools. Each theme is a JSON file in `themes/`; `quickshell/Style.qml` lists every token with its default. A theme only needs the tokens it changes, because the rest come from `linear`. The effects (ambient light, grid, noise, cursor spotlight, layered shadows, gradient text) are switched by `effects` in the theme, so a flat theme like `claude` uses the same components without them.
 
 ## Commands
 

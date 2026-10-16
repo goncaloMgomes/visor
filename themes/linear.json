@@ -1,0 +1,97 @@
+{
+  "bgDeep": "#020203",
+  "bgBase": "#050506",
+  "bgElevated": "#0a0a0c",
+  "bgTop": "#0a0a0f",
+  "surface": "#0dffffff",
+  "surfaceHover": "#14ffffff",
+  "cardTop": "#14ffffff",
+  "cardBottom": "#05ffffff",
+  "inputBg": "#0f0f12",
+  "codeBg": "#0a0a0c",
+  "fg": "#ededef",
+  "subtle": "#99ffffff",
+  "muted": "#8a8f98",
+  "accent": "#5e6ad2",
+  "accentHi": "#6872d9",
+  "accentDim": "#1e2142",
+  "accentGlow": "#4d5e6ad2",
+  "line": "#0fffffff",
+  "lineHi": "#1affffff",
+  "lineAccent": "#4d5e6ad2",
+  "onAccent": "#ffffff",
+  "ok": "#4cc38a",
+  "bad": "#eb5757",
+  "errorFg": "#f2a3a3",
+  "sans": "Inter",
+  "serif": "Inter",
+  "mono": "monospace",
+  "radius": 16,
+  "controlRadius": 8,
+  "effects": {
+    "ambient": true,
+    "grid": 0.02,
+    "noise": 0.015,
+    "spotlight": 0.15,
+    "shadows": true,
+    "gradientText": true
+  },
+  "blobs": [
+    {
+      "x": 0.5,
+      "y": 0.0,
+      "r": 1.25,
+      "color": "#5e6ad2",
+      "opacity": 0.25,
+      "float": 9000
+    },
+    {
+      "x": 0.0,
+      "y": 0.45,
+      "r": 0.9,
+      "color": "#a35ad8",
+      "opacity": 0.15,
+      "float": 10000
+    },
+    {
+      "x": 1.0,
+      "y": 0.62,
+      "r": 0.85,
+      "color": "#4f6fe8",
+      "opacity": 0.12,
+      "float": 8000
+    },
+    {
+      "x": 0.5,
+      "y": 1.05,
+      "r": 0.9,
+      "color": "#5e6ad2",
+      "opacity": 0.1,
+      "pulse": 6000
+    }
+  ],
+  "spark": "✦",
+  "spinGlyphs": [
+    "⠋",
+    "⠙",
+    "⠹",
+    "⠸",
+    "⠼",
+    "⠴",
+    "⠦",
+    "⠧",
+    "⠇",
+    "⠏"
+  ],
+  "verbs": [
+    "Thinking",
+    "Reasoning",
+    "Working",
+    "Considering",
+    "Tracing",
+    "Computing",
+    "Composing",
+    "Resolving"
+  ],
+  "welcome": "How can I help?"
+}

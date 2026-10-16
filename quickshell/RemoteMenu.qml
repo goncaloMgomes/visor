@@ -9,7 +9,6 @@ PopupWindow {
     id: menu
 
     property bool open: false
-    property var theme: ({})
     property string unit: ""             // systemd --user unit ("" = no service section)
     property string label: ""
     property string countPattern: ""     // pgrep -f pattern for the unit's children, shown as "N sessions"
@@ -30,12 +29,15 @@ PopupWindow {
     property string since: ""
     Timer { id: disarm; interval: 3000; onTriggered: menu.armed = "" }
 
+    // room around the card for its shadow
+    readonly property real pad: 14
     visible: open
     color: "transparent"
-    implicitWidth: 244
-    implicitHeight: box.height + 8
+    implicitWidth: 236 + 2 * pad
+    implicitHeight: box.height + 2 * pad
 
     onOpenChanged: {
+        if (open) enter.restart()
         armed = ""
         editing = false
         if (open && unit && !info.running) info.running = true
@@ -59,24 +61,27 @@ PopupWindow {
     }
     Timer { running: menu.open && menu.unit !== ""; repeat: true; interval: 3000; onTriggered: if (!info.running) info.running = true }
 
-    readonly property color bg: theme.bg || "#1d2026"
-    readonly property color hi: theme.surface || "#272b33"
-    readonly property color fg: theme.fg || "#eef2f6"
-    readonly property color dim: theme.dim || "#8a93a1"
-    readonly property color line: theme.line || "#26d6e2f0"
-    readonly property color accent: theme.accent || "#3fc8e4"
-    readonly property color armedBg: theme.armed || "#1f3a40"
-    readonly property string sans: theme.sans || "Noto Sans"
-
-    Rectangle {
+    // the card fades in and settles 6 px down (expo-out)
+    ParallelAnimation {
+        id: enter
+        Motion { target: box; property: "opacity"; from: 0; to: 1 }
+        Motion { target: box; property: "y"; from: menu.pad - 6; to: menu.pad }
+    }
+    Elevation { x: box.x; y: box.y; width: box.width; height: box.height; opacity: box.opacity }
+    Item {
         id: box
-        x: 4; y: 4
-        width: menu.implicitWidth - 8
+        x: menu.pad; y: menu.pad
+        width: menu.implicitWidth - 2 * menu.pad
         height: col.implicitHeight + 12
-        radius: 12
-        color: menu.bg
-        border.width: 1
-        border.color: menu.line
+        Ambient { anchors.fill: parent; running: menu.open }
+        Spotlight {}
+        Rectangle {   // hairline border
+            anchors.fill: parent
+            radius: Style.radius
+            color: "transparent"
+            border.width: 1
+            border.color: Style.line
+        }
 
         Column {
             id: col
@@ -93,23 +98,23 @@ PopupWindow {
                     id: dot
                     x: 8; anchors.verticalCenter: parent.verticalCenter
                     width: 8; height: 8; radius: 4
-                    color: menu.remoteOn ? "#5dffa0" : menu.waking ? "#ffb347" : "#6b6a65"
+                    color: menu.remoteOn ? Style.ok : menu.waking ? Style.warn : Style.muted
                 }
                 Column {
                     anchors { left: dot.right; leftMargin: 10; verticalCenter: parent.verticalCenter }
                     Text {
                         text: menu.remoteOn ? menu.label + " is on" : menu.waking ? "Starting " + menu.label + "…" : menu.label + " is off"
-                        color: menu.fg; font.family: menu.sans; font.pixelSize: 13; font.weight: Font.Medium
+                        color: Style.fg; font.family: Style.sans; font.pixelSize: 13; font.weight: Font.Medium
                     }
                     Text {
                         visible: menu.remoteOn && (menu.sessions >= 0 || menu.since !== "")
                         text: [menu.sessions >= 0 ? (menu.sessions === 1 ? "1 session" : menu.sessions + " sessions") : "",
                                menu.since ? "up since " + menu.since : ""].filter(x => x).join(" · ")
-                        color: menu.dim; font.family: menu.sans; font.pixelSize: 11
+                        color: Style.muted; font.family: Style.sans; font.pixelSize: 11
                     }
                 }
             }
-            Rectangle { visible: menu.unit !== ""; width: col.width; height: visible ? 1 : 0; color: menu.line }
+            Rectangle { visible: menu.unit !== ""; width: col.width; height: visible ? 1 : 0; color: Style.line }
 
             Repeater {
                 model: [
@@ -124,23 +129,23 @@ PopupWindow {
                     visible: modelData.show && menu.unit !== ""
                     width: col.width
                     height: visible ? 32 : 0
-                    radius: 8
-                    color: isArmed ? menu.armedBg : hover.containsMouse ? menu.hi : "transparent"
+                    radius: Style.controlRadius
+                    color: isArmed ? Style.accentDim : hover.containsMouse ? Style.surface : "transparent"
                     Text {
                         id: ic
                         x: 8; width: 18
                         anchors.verticalCenter: parent.verticalCenter
                         horizontalAlignment: Text.AlignHCenter
                         text: row.modelData.icon
-                        color: row.isArmed ? menu.accent : menu.dim
+                        color: row.isArmed ? Style.accent : Style.muted
                         font.pixelSize: 13
                     }
                     Text {
                         anchors { left: ic.right; leftMargin: 8; verticalCenter: parent.verticalCenter }
                         text: row.isArmed ? "Click again to " + row.modelData.label.toLowerCase() + " " + menu.label
                                           : row.modelData.label
-                        color: row.isArmed ? menu.accent : menu.fg
-                        font.family: menu.sans; font.pixelSize: row.isArmed ? 11 : 13
+                        color: row.isArmed ? Style.accent : Style.fg
+                        font.family: Style.sans; font.pixelSize: row.isArmed ? 11 : 13
                     }
                     MouseArea {
                         id: hover
@@ -158,39 +163,39 @@ PopupWindow {
                 }
             }
 
-            Rectangle { visible: menu.unit !== ""; width: col.width; height: visible ? 1 : 0; color: menu.line }
+            Rectangle { visible: menu.unit !== ""; width: col.width; height: visible ? 1 : 0; color: Style.line }
 
             // speech balloons on / off
             Rectangle {
                 width: col.width
                 height: 32
-                radius: 8
-                color: balloonHover.containsMouse ? menu.hi : "transparent"
+                radius: Style.controlRadius
+                color: balloonHover.containsMouse ? Style.surface : "transparent"
                 Text {
                     id: bIc
                     x: 8; width: 18
                     anchors.verticalCenter: parent.verticalCenter
                     horizontalAlignment: Text.AlignHCenter
                     text: "❝"
-                    color: menu.dim
-                    font.family: menu.sans; font.pixelSize: 14
+                    color: Style.muted
+                    font.family: Style.sans; font.pixelSize: 14
                 }
                 Text {
                     anchors { left: bIc.right; leftMargin: 8; verticalCenter: parent.verticalCenter }
                     text: "Speech balloons"
-                    color: menu.fg; font.family: menu.sans; font.pixelSize: 13
+                    color: Style.fg; font.family: Style.sans; font.pixelSize: 13
                 }
                 Rectangle {   // switch
                     anchors { right: parent.right; rightMargin: 8; verticalCenter: parent.verticalCenter }
                     width: 30; height: 17; radius: 8.5
-                    color: menu.balloonsOn ? menu.accent : "#4a4945"
-                    Behavior on color { ColorAnimation { duration: 150 } }
+                    color: menu.balloonsOn ? Style.accent : Style.surfaceHover
+                    Behavior on color { ColorMotion {} }
                     Rectangle {
                         width: 13; height: 13; radius: 6.5
                         y: 2
                         x: menu.balloonsOn ? parent.width - width - 2 : 2
-                        color: menu.fg
-                        Behavior on x { NumberAnimation { duration: 150; easing.type: Easing.OutQuad } }
+                        color: Style.fg
+                        Behavior on x { Motion { duration: Style.quick } }
                     }
                 }
                 MouseArea {
@@ -207,39 +212,39 @@ PopupWindow {
                 visible: menu.weatherOn
                 width: col.width
                 height: visible ? 32 : 0
-                radius: 8
-                color: menu.editing ? menu.hi : cityHover.containsMouse ? menu.hi : "transparent"
+                radius: Style.controlRadius
+                color: menu.editing ? Style.surface : cityHover.containsMouse ? Style.surface : "transparent"
                 border.width: menu.editing ? 1 : 0
-                border.color: menu.accent
+                border.color: Style.accent
                 Text {
                     id: wIc
                     x: 8; width: 18
                     anchors.verticalCenter: parent.verticalCenter
                     horizontalAlignment: Text.AlignHCenter
                     text: "☁"
-                    color: menu.dim
-                    font.family: menu.sans; font.pixelSize: 14
+                    color: Style.muted
+                    font.family: Style.sans; font.pixelSize: 14
                 }
                 Text {
                     visible: !menu.editing
                     anchors { left: wIc.right; leftMargin: 8; right: parent.right; rightMargin: 8; verticalCenter: parent.verticalCenter }
                     text: menu.city ? "Weather: " + menu.city : "Set weather city…"
                     elide: Text.ElideRight
-                    color: menu.city ? menu.fg : menu.dim
-                    font.family: menu.sans; font.pixelSize: 13
+                    color: menu.city ? Style.fg : Style.muted
+                    font.family: Style.sans; font.pixelSize: 13
                 }
                 TextInput {
                     id: cityInput
                     visible: menu.editing
                     anchors { left: wIc.right; leftMargin: 8; right: parent.right; rightMargin: 8; verticalCenter: parent.verticalCenter }
-                    color: menu.fg
-                    selectionColor: menu.accent
-                    font.family: menu.sans; font.pixelSize: 13
+                    color: Style.fg
+                    selectionColor: Style.accent
+                    font.family: Style.sans; font.pixelSize: 13
                     clip: true
                     Text {
                         visible: !cityInput.text
                         text: "City, Country — Enter to save"
-                        color: menu.dim
+                        color: Style.muted
                         font: cityInput.font
                     }
                     Keys.onReturnPressed: { menu.citySet(text); menu.editing = false }

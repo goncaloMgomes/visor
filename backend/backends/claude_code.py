@@ -421,7 +421,6 @@ class Backend:
         return {
             "id": "claude-code",
             "name": "Claude",
-            "theme": "claude",
             "models": self.opts.get("models") or [],
             "defaultModel": self.default_model(),
             "mode": {"label": label, "tip": tip},

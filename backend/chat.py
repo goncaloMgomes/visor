@@ -14,6 +14,7 @@ The backend is `backend` in ~/.config/visor/config.json (see backends/).
 import json
 import os
 import re
+import subprocess
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -22,22 +23,30 @@ from common import CONFIG_FILE, load_config, load_theme, power_supplies  # noqa:
 import backends  # noqa: E402
 
 
+def desktop_animations():
+    """The desktop's own "enable animations" switch (GNOME/GTK setting), True if unknown."""
+    try:
+        r = subprocess.run(["gsettings", "get", "org.gnome.desktop.interface", "enable-animations"],
+                           capture_output=True, text=True, timeout=2)
+        return r.stdout.strip() != "false"
+    except (OSError, subprocess.TimeoutExpired):
+        return True
+
+
 def info(cfg):
     try:
         be = backends.load(cfg).info()
     except Exception as e:   # a broken backend shouldn't stop the face
         be = {"id": cfg.get("backend"), "name": "Assistant", "models": [], "features": {},
               "available": False, "error": str(e)}
-    theme_name = cfg.get("theme") or "auto"
-    if theme_name == "auto":
-        theme_name = be.get("theme") or "neutral"
     bat, ac = power_supplies()
     p = cfg["power"]
     return {
         "config": cfg,
         "configFile": CONFIG_FILE,
         "backend": be,
-        "theme": load_theme(theme_name, cfg.get("themeOverrides")),
+        "theme": load_theme(cfg.get("theme"), cfg.get("themeOverrides")),
+        "reducedMotion": bool(cfg.get("reducedMotion")) or not desktop_animations(),
         "power": {"battery": bat if p.get("battery") in ("", "auto", None) else p["battery"],
                   "ac": ac if p.get("ac") in ("", "auto", None) else p["ac"]},
         "env": {

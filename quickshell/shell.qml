@@ -41,7 +41,9 @@ ShellRoot {
         command: [shell.helper, "info"]
         stdout: StdioCollector {
             onStreamFinished: {
-                try { shell.info = JSON.parse(this.text) } catch (e) { console.warn("visor: chat.py info failed:", this.text) }
+                try { shell.info = JSON.parse(this.text) } catch (e) { console.warn("visor: chat.py info failed:", this.text); return }
+                Style.theme = shell.info.theme
+                Style.reducedMotion = shell.info.reducedMotion
             }
         }
     }
@@ -143,14 +145,13 @@ ShellRoot {
     // right-click the robot: settings, and the service's status + Start / Restart / Stop
     RemoteMenu {
         id: remoteMenu
-        theme: shell.info ? shell.info.theme : ({})
         unit: shell.remoteUnit
         label: shell.serviceLabel
         countPattern: shell.cfg.service?.countPattern ?? ""
         weatherOn: shell.features.weather !== false
         anchor.window: faceWin
-        anchor.rect.x: faceWin.width - implicitWidth
-        anchor.rect.y: faceWin.height + 2
+        anchor.rect.x: faceWin.width - implicitWidth + pad - 4
+        anchor.rect.y: faceWin.height + 6 - pad
         remoteOn: shell.remoteOn
         waking: shell.waking
         onStartRequested: shell.wakeRemote()
@@ -236,12 +237,11 @@ ShellRoot {
 
     ChatPanel {
         id: chat
-        margins.top: (shell.cfg.position?.chatTop ?? 46) + (shell.zoom - 1) * 40
-        margins.right: shell.cfg.position?.chatRight ?? 8
+        chatTop: (shell.cfg.position?.chatTop ?? 46) + (shell.zoom - 1) * 40
+        chatRight: shell.cfg.position?.chatRight ?? 8
         runDir: shell.runDir
         stateHome: shell.stateHome
         helper: shell.helper
-        theme: shell.info ? shell.info.theme : ({})
         backend: shell.backend
         cfg: shell.cfg
         hasService: shell.hasService

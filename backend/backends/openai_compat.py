@@ -367,7 +367,6 @@ class Backend:
         return {
             "id": "openai",
             "name": self.opts.get("name") or "Assistant",
-            "theme": "neutral",
             "models": self.models(),
             "defaultModel": self.default_model(),
             "mode": ({"label": "Ask" if ask else "Auto",

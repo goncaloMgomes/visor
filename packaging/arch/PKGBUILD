@@ -8,7 +8,8 @@ arch=('any')
 url="https://github.com/goncalomgomes/visor"
 license=('MIT')
 depends=('quickshell' 'python')
-optdepends=('jq: Claude Code hook'
+optdepends=('inter-font: the popups\' typeface'
+            'jq: Claude Code hook'
             'grim: let the chat see your screen'
             'curl: weather'
             'brightnessctl: brightness reactions'

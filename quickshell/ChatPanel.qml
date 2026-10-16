@@ -3,6 +3,7 @@ import Quickshell.Io
 import Quickshell.Wayland
 import QtQuick
 import QtQuick.Controls
+import QtQuick.Effects
 
 // Chat popup that drops down beneath the face. Each chat runs through
 // `chat.py bridge`, which talks to the configured backend (Claude Code, an
@@ -15,7 +16,6 @@ PanelWindow {
     property string runDir
     property string stateHome
     property string helper
-    property var theme: ({})             // colours, fonts, spinner (themes/*.json)
     property var backend: ({})           // chat.py info's backend: name, models, features, mode
     property var cfg: ({})
     property bool hasService: false
@@ -67,7 +67,12 @@ PanelWindow {
 
     visible: open
     anchors { top: true; right: true }
-    margins { top: 46; right: 8 }
+    // where the panel sits (from the screen's top-right corner); the window
+    // starts `room` px further out so the panel's shadow isn't cut off
+    property real chatTop: 46
+    property real chatRight: 8
+    readonly property real room: Style.shadows ? 12 : 0
+    margins { top: Math.max(0, chatTop - room); right: Math.max(0, chatRight - room) }
     // The (transparent) window always has the largest allowed size and only
     // the panel drawn inside it changes: resizing never resizes the surface,
     // so there's no compositor round trip per mouse move and no flicker when
@@ -186,40 +191,16 @@ PanelWindow {
     WlrLayershell.keyboardFocus: open ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
 
     onOpenChanged: {
-        if (open) { input.forceActiveFocus(); resumeCheck() }
+        if (open) { input.forceActiveFocus(); resumeCheck(); enter.restart() }
         else { stopArmed = false; modelMenuOpen = false }
     }
 
-    // palette and fonts from the theme (themes/*.json; "theme" in the config)
-    readonly property color bg: theme.bg || "#1d2026"
-    readonly property color surface: theme.surface || "#272b33"
-    readonly property color raised: theme.raised || "#30353f"
-    readonly property color userBubble: theme.userBubble || "#2e343e"
-    readonly property color line: theme.line || "#26d6e2f0"
-    readonly property color lineHi: theme.lineHi || "#4dd6e2f0"
-    readonly property color fg: theme.fg || "#eef2f6"
-    readonly property color text2: theme.text2 || "#c3cad4"
-    readonly property color dim: theme.dim || "#8a93a1"
-    readonly property color accent: theme.accent || "#3fc8e4"
-    readonly property color accentHi: theme.accentHi || "#6fd8ee"
-    readonly property color accentDim: theme.accentDim || "#25505a"
-    readonly property color onAccent: theme.onAccent || "#ffffff"
-    readonly property color ok: theme.ok || "#8fca7a"
-    readonly property color bad: theme.bad || "#e86f6a"
-    readonly property color errorFg: theme.errorFg || "#f2a6a2"
-    readonly property string sans: theme.sans || "Noto Sans"
-    readonly property string serif: theme.serif || sans   // the welcome line
-    readonly property string spark: theme.spark || "✦"
-    function alpha(c, a) { return Qt.rgba(c.r, c.g, c.b, a) }
-    function hex(c) { return c.toString().slice(0, 7) }    // for <font color> in rich text
+    // colours, type, radii and motion: Style.qml (the theme's tokens)
 
-    // spinner while a reply is on its way
-    readonly property var spinGlyphs: theme.spinGlyphs || ["·", "•", "●", "•"]
-    readonly property var verbs: theme.verbs || ["Thinking"]
     property int spin: 0
     property string verb: "Thinking"
-    Timer { running: panel.busy && panel.open; repeat: true; interval: 120; onTriggered: panel.spin = (panel.spin + 1) % panel.spinGlyphs.length }
-    onBusyChanged: if (busy) verb = verbs[Math.floor(Math.random() * verbs.length)]
+    Timer { running: panel.busy && panel.open; repeat: true; interval: 120; onTriggered: panel.spin = (panel.spin + 1) % Style.spinGlyphs.length }
+    onBusyChanged: if (busy) verb = Style.verbs[Math.floor(Math.random() * Style.verbs.length)]
 
     function toolLabel(t) {   // "Read  ~/x" -> "Read(~/x)"
         const i = t.indexOf("  ")
@@ -549,14 +530,19 @@ PanelWindow {
         property string tip
         property bool alert: false
         signal clicked()
-        width: 28; height: 28; radius: 8
-        color: alert ? panel.alpha(panel.bad, 0.7) : hover.containsMouse ? panel.surface : "transparent"
-        Behavior on color { ColorAnimation { duration: 120 } }
+        width: 28; height: 28; radius: Style.controlRadius
+        color: alert ? Style.alpha(Style.bad, 0.7) : hover.containsMouse ? Style.surface : "transparent"
+        Behavior on color { ColorMotion {} }
+        scale: hover.pressed ? 0.98 : 1
+        Behavior on scale { Motion { duration: Style.quick } }
+        Accessible.role: Accessible.Button
+        Accessible.name: tip
         Text {
             anchors.centerIn: parent
             text: btn.glyph
-            color: btn.alert || hover.containsMouse ? panel.fg : panel.dim
-            font.family: panel.sans; font.pixelSize: 15
+            color: btn.alert || hover.containsMouse ? Style.fg : Style.muted
+            Behavior on color { ColorMotion {} }
+            font.family: Style.sans; font.pixelSize: 15
         }
         MouseArea {
             id: hover
@@ -568,15 +554,47 @@ PanelWindow {
         Tip { visible: hover.containsMouse && btn.tip !== ""; text: btn.tip }
     }
 
-    Rectangle {
+    // The panel: layered shadow, ambient light pools, a spotlight following
+    // the cursor, a hairline border with a lit top edge. Opening, it fades in
+    // and settles 8 px into place (expo-out).
+    ParallelAnimation {
+        id: enter
+        Motion { target: frame; property: "opacity"; from: 0; to: 1 }
+        Motion { target: settle; property: "y"; from: -8; to: 0 }
+        Motion { target: frame; property: "scale"; from: 0.98; to: 1 }
+    }
+    Item {
         id: frame
-        anchors { top: parent.top; right: parent.right }
+        anchors { top: parent.top; right: parent.right
+                  topMargin: panel.chatTop - panel.margins.top; rightMargin: panel.chatRight - panel.margins.right }
         width: panel.panelW
         height: panel.panelH
-        radius: 18
-        color: panel.bg
-        border.width: 1
-        border.color: panel.line
+        transformOrigin: Item.TopRight
+        transform: Translate { id: settle }
+
+        HoverHandler { id: frameHover }
+        Elevation { anchors.fill: parent; lifted: frameHover.hovered }
+        Ambient { anchors.fill: parent; running: panel.open }
+        Spotlight {}
+        Rectangle {   // hairline border, brighter under the cursor
+            anchors.fill: parent
+            radius: Style.radius
+            color: "transparent"
+            border.width: 1
+            border.color: frameHover.hovered ? Style.lineHi : Style.line
+            Behavior on border.color { ColorMotion { duration: Style.standard } }
+        }
+        Rectangle {   // light catching the top edge
+            anchors { top: parent.top; topMargin: 1; horizontalCenter: parent.horizontalCenter }
+            width: parent.width - 2 * Style.radius
+            height: 1
+            gradient: Gradient {
+                orientation: Gradient.Horizontal
+                GradientStop { position: 0; color: "#00ffffff" }
+                GradientStop { position: 0.5; color: Style.alpha("#ffffff", Style.ambient ? 0.14 : 0) }
+                GradientStop { position: 1; color: "#00ffffff" }
+            }
+        }
 
         Keys.onEscapePressed: { if (panel.modelMenuOpen) panel.modelMenuOpen = false; else panel.open = false }
 
@@ -589,16 +607,18 @@ PanelWindow {
             Rectangle {
                 id: picker
                 anchors { left: parent.left; right: buttons.left; rightMargin: 6; verticalCenter: parent.verticalCenter }
-                height: 38; radius: 10
-                color: pickHover.containsMouse || panel.sessionsOpen ? panel.surface : "transparent"
-                Behavior on color { ColorAnimation { duration: 120 } }
+                height: 38; radius: Style.controlRadius + 2
+                color: pickHover.containsMouse || panel.sessionsOpen ? Style.surface : "transparent"
+                Behavior on color { ColorMotion {} }
 
-                Text {
+                Text {   // the spark, glowing softly
                     id: spark
                     anchors { left: parent.left; leftMargin: 8; verticalCenter: parent.verticalCenter }
-                    text: panel.spark
-                    color: panel.accent
-                    font.pixelSize: 20
+                    text: Style.spark
+                    color: Style.accent
+                    font.pixelSize: 18
+                    layer.enabled: Style.shadows
+                    layer.effect: MultiEffect { shadowEnabled: true; shadowColor: Style.accent; shadowBlur: 0.6; shadowOpacity: 0.8; shadowVerticalOffset: 0; shadowHorizontalOffset: 0 }
                 }
                 Column {
                     anchors { left: spark.right; leftMargin: 8; right: parent.right; rightMargin: 8; verticalCenter: parent.verticalCenter }
@@ -609,13 +629,13 @@ PanelWindow {
                         Text {
                             width: Math.min(implicitWidth, parent.width - 14)
                             text: panel.sessionTitle
-                            color: panel.fg
-                            font.family: panel.sans; font.pixelSize: 13; font.weight: Font.Medium
+                            color: Style.fg
+                            font.family: Style.sans; font.pixelSize: 13; font.weight: Font.DemiBold; font.letterSpacing: -0.2
                             elide: Text.ElideRight
                         }
                         Text {
                             text: panel.sessionsOpen ? "⌃" : "⌄"
-                            color: panel.dim
+                            color: Style.muted
                             font.pixelSize: 11
                             anchors.verticalCenter: parent.verticalCenter
                         }
@@ -624,8 +644,8 @@ PanelWindow {
                         width: parent.width
                         visible: text !== ""
                         text: panel.forkPending ? "Open elsewhere · your reply continues in a copy" : ""
-                        color: panel.dim
-                        font.family: panel.sans; font.pixelSize: 10
+                        color: Style.muted
+                        font.family: Style.sans; font.pixelSize: 10
                         elide: Text.ElideRight
                     }
                 }
@@ -664,11 +684,16 @@ PanelWindow {
             }
         }
 
-        Rectangle {
+        Rectangle {   // a gradient hairline under the header
             id: rule
             anchors { top: header.bottom; topMargin: 6; left: parent.left; right: parent.right }
             height: 1
-            color: panel.line
+            gradient: Gradient {
+                orientation: Gradient.Horizontal
+                GradientStop { position: 0; color: Style.alpha(Style.lineHi, 0) }
+                GradientStop { position: 0.5; color: Style.lineHi }
+                GradientStop { position: 1; color: Style.alpha(Style.lineHi, 0) }
+            }
         }
 
         // conversation
@@ -683,6 +708,12 @@ PanelWindow {
             boundsBehavior: Flickable.StopAtBounds
             ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
             onCountChanged: positionViewAtEnd()
+            // new messages fade up 8 px (history loads without animating)
+            add: Transition {
+                enabled: panel.historyDone && !Style.reducedMotion
+                Motion { property: "opacity"; from: 0; to: 1 }
+                Motion { property: "y"; from: ViewTransition.destination.y + 8; to: ViewTransition.destination.y }
+            }
 
             // mouse wheel notches start a flick, so they use the same physics as a
             // drag (no fighting with the built-in wheel); touchpads keep their own scrolling
@@ -700,6 +731,7 @@ PanelWindow {
                 width: view.width
                 height: panel.busy ? 30 : 0
                 Row {
+                    id: statusRow
                     visible: panel.busy
                     anchors.verticalCenter: parent.verticalCenter
                     width: parent.width
@@ -707,22 +739,36 @@ PanelWindow {
                     Text {
                         width: 14
                         horizontalAlignment: Text.AlignHCenter
-                        text: panel.spinGlyphs[panel.spin]
-                        color: panel.accent
+                        text: Style.spinGlyphs[panel.spin]
+                        color: Style.accent
                         font.pixelSize: 15
+                        anchors.verticalCenter: parent.verticalCenter
                     }
-                    Text {   // the AI's own summary of what it's doing, else a spinner verb
-                        width: Math.min(implicitWidth, parent.width - 140)
-                        text: (panel.ask0 ? "Waiting for you" : panel.activity || panel.verb) + "…"
-                        color: panel.accent
-                        font.family: panel.sans; font.pixelSize: 13
+                    // the AI's own summary of what it's doing, else a verb, with a shimmer
+                    readonly property string status: (panel.ask0 ? "Waiting for you" : panel.activity || panel.verb) + "…"
+                    readonly property bool fits: statusMetrics.advanceWidth < parent.width - 150
+                    TextMetrics { id: statusMetrics; font: statusFont.font; text: statusRow.status }
+                    Text { id: statusFont; visible: false; font.family: Style.sans; font.pixelSize: 13; font.weight: Font.Medium }
+                    GlowText {
+                        visible: parent.fits
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: parent.status
+                        font: statusFont.font
+                        shimmer: true
+                        color: Style.accent
+                    }
+                    Text {   // long summaries: plain, elided
+                        visible: !parent.fits
+                        width: parent.width - 150
+                        text: parent.status
+                        color: Style.accent
+                        font: statusFont.font
                         elide: Text.ElideRight
+                        anchors.verticalCenter: parent.verticalCenter
                     }
-                    Text {
+                    Caption {
                         visible: !panel.ask0
-                        text: "(esc to interrupt)"
-                        color: panel.dim
-                        font.family: panel.sans; font.pixelSize: 11
+                        text: "esc to stop"
                         anchors.verticalCenter: parent.verticalCenter
                     }
                 }
@@ -747,8 +793,19 @@ PanelWindow {
                     anchors.right: row.mine ? parent.right : undefined
                     width: row.mine ? Math.min(body.implicitWidth + 28, row.width * 0.86) : row.width
                     height: body.height + (row.mine ? 18 : 14)
-                    radius: 12
-                    color: row.mine ? panel.userBubble : panel.alpha(panel.bad, 0.18)
+                    radius: Style.radius - 2
+                    gradient: Gradient {
+                        GradientStop { position: 0; color: row.mine ? Style.cardTop : Style.alpha(Style.bad, 0.16) }
+                        GradientStop { position: 1; color: row.mine ? Style.cardBottom : Style.alpha(Style.bad, 0.08) }
+                    }
+                    border.width: 1
+                    border.color: row.mine ? Style.line : Style.alpha(Style.bad, 0.3)
+                    Rectangle {   // lit top edge
+                        anchors { top: parent.top; topMargin: 1; horizontalCenter: parent.horizontalCenter }
+                        width: parent.width - 2 * parent.radius
+                        height: 1
+                        color: Style.alpha("#ffffff", Style.ambient ? 0.08 : 0)
+                    }
                     TextEdit {
                         id: body
                         x: row.mine ? 14 : 10
@@ -759,10 +816,10 @@ PanelWindow {
                         wrapMode: TextEdit.Wrap
                         textFormat: TextEdit.PlainText
                         text: bubble.visible ? row.text : ""
-                        color: row.mine ? panel.fg : panel.errorFg
-                        font.family: panel.sans; font.pixelSize: 14
-                        selectionColor: panel.alpha(panel.accent, 0.4)
-                        selectedTextColor: panel.fg
+                        color: row.mine ? Style.fg : Style.errorFg
+                        font.family: Style.sans; font.pixelSize: 14
+                        selectionColor: Style.alpha(Style.accent, 0.4)
+                        selectedTextColor: Style.fg
                     }
                 }
 
@@ -784,8 +841,8 @@ PanelWindow {
                                 id: sumText
                                 width: Math.min(implicitWidth, sumRow.width - diffBadge.width - chev.width - 14)
                                 text: row.summary ? row.summary.text : ""
-                                color: sumArea.containsMouse ? panel.text2 : panel.dim
-                                font.family: panel.sans; font.pixelSize: 13
+                                color: sumArea.containsMouse ? Style.subtle : Style.muted
+                                font.family: Style.sans; font.pixelSize: 13
                                 wrapMode: Text.Wrap
                             }
                             Rectangle {
@@ -794,19 +851,19 @@ PanelWindow {
                                 width: visible ? diffRow.implicitWidth + 8 : 0
                                 height: 16; radius: 4
                                 y: 1
-                                color: panel.alpha(panel.ok, 0.12)
+                                color: Style.alpha(Style.ok, 0.12)
                                 Row {
                                     id: diffRow
                                     anchors.centerIn: parent
                                     spacing: 3
                                     Text {
                                         text: row.summary ? "+" + row.summary.add : ""
-                                        color: panel.ok
+                                        color: Style.ok
                                         font.family: "monospace"; font.pixelSize: 10
                                     }
                                     Text {
                                         text: row.summary ? "-" + row.summary.del : ""
-                                        color: panel.bad
+                                        color: Style.bad
                                         font.family: "monospace"; font.pixelSize: 10
                                     }
                                 }
@@ -814,8 +871,8 @@ PanelWindow {
                             Text {
                                 id: chev
                                 text: row.open ? "⌄" : "›"
-                                color: panel.dim
-                                font.family: panel.sans; font.pixelSize: 13
+                                color: Style.muted
+                                font.family: Style.sans; font.pixelSize: 13
                             }
                         }
                         MouseArea {
@@ -840,7 +897,7 @@ PanelWindow {
                                 Text {   // tool bullet
                                     x: 4; y: 3
                                     text: "⏺"
-                                    color: panel.ok
+                                    color: Style.ok
                                     font.pixelSize: 10
                                 }
                                 Text {
@@ -852,11 +909,11 @@ PanelWindow {
                                     readonly property var t: call.modelData
                                     text: !t.name ? panel.esc(panel.toolLabel(t.text))
                                         : "<b>" + panel.esc(panel.toolName(t.name)) + "</b>"
-                                          + (t.code ? (t.desc ? "  <font color=\"" + panel.hex(panel.dim) + "\">" + panel.esc(t.desc) + "</font>" : "")
-                                             : t.arg ? "<font color=\"" + panel.hex(panel.dim) + "\">(" + panel.esc(t.arg) + ")</font>" : "")
-                                          + (t.code ? "  <font color=\"" + panel.hex(panel.dim) + "\">" + (call.expanded ? "▾" : "▸") + "</font>" : "")
-                                    color: panel.text2
-                                    font.family: panel.sans; font.pixelSize: 12
+                                          + (t.code ? (t.desc ? "  <font color=\"" + Style.hex(Style.muted) + "\">" + panel.esc(t.desc) + "</font>" : "")
+                                             : t.arg ? "<font color=\"" + Style.hex(Style.muted) + "\">(" + panel.esc(t.arg) + ")</font>" : "")
+                                          + (t.code ? "  <font color=\"" + Style.hex(Style.muted) + "\">" + (call.expanded ? "▾" : "▸") + "</font>" : "")
+                                    color: Style.subtle
+                                    font.family: Style.sans; font.pixelSize: 12
                                 }
                                 // click the line to show or hide its command
                                 MouseArea {
@@ -900,10 +957,10 @@ PanelWindow {
                                 wrapMode: TextEdit.Wrap
                                 textFormat: TextEdit.MarkdownText
                                 text: seg.modelData.code ? "" : seg.modelData.text
-                                color: panel.fg
-                                font.family: panel.sans; font.pixelSize: 14
-                                selectionColor: panel.alpha(panel.accent, 0.4)
-                                selectedTextColor: panel.fg
+                                color: Style.fg
+                                font.family: Style.sans; font.pixelSize: 14
+                                selectionColor: Style.alpha(Style.accent, 0.4)
+                                selectedTextColor: Style.fg
                             }
                             CodeBlock {
                                 id: block
@@ -922,21 +979,43 @@ PanelWindow {
                 anchors.centerIn: parent
                 visible: messages.count === 0 && !panel.busy && !panel.deciding
                 width: parent.width - 40
-                spacing: 10
-                Text {
+                spacing: 12
+                Item {   // the spark in a glowing icon container
                     anchors.horizontalCenter: parent.horizontalCenter
-                    text: panel.spark
-                    color: panel.accent
-                    font.pixelSize: 34
+                    width: 52; height: 52
+                    Elevation { anchors.fill: parent; radius: 12; glow: true; depth: 0.6 }
+                    Rectangle {
+                        anchors.fill: parent
+                        radius: 12
+                        gradient: Gradient {
+                            GradientStop { position: 0; color: Qt.tint(Style.bgElevated, Style.surfaceHover) }
+                            GradientStop { position: 1; color: Style.bgElevated }
+                        }
+                        border.width: 1
+                        border.color: Style.lineHi
+                    }
+                    Text {
+                        anchors.centerIn: parent
+                        text: Style.spark
+                        color: Style.accent
+                        font.pixelSize: 24
+                    }
                 }
-                Text {
+                Caption {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    text: panel.aiName
+                }
+                Text { id: headFont; visible: false; font.family: Style.serif; font.pixelSize: 22; font.weight: Font.DemiBold; font.letterSpacing: -0.6 }
+                Item {
                     width: parent.width
-                    horizontalAlignment: Text.AlignHCenter
-                    wrapMode: Text.Wrap
-                    text: panel.backend.available === false ? panel.aiName + " isn't set up yet"
-                                                            : (panel.theme.welcome || "How can I help?")
-                    color: panel.fg
-                    font.family: panel.serif; font.pixelSize: 21
+                    height: headline.implicitHeight
+                    readonly property string text: panel.backend.available === false ? panel.aiName + " isn't set up yet" : Style.welcome
+                    GlowText {
+                        id: headline
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        text: parent.text
+                        font: headFont.font
+                    }
                 }
                 Text {
                     width: parent.width
@@ -945,27 +1024,30 @@ PanelWindow {
                     text: panel.backend.available === false ? "Run `visor doctor` in a terminal to see what's missing."
                         : panel.shotOk && panel.shareScreen ? "I can see what you were doing on screen."
                         : "Ask me anything."
-                    color: panel.dim
-                    font.family: panel.sans; font.pixelSize: 12
+                    color: Style.muted
+                    font.family: Style.sans; font.pixelSize: 13
+                    lineHeight: 1.4
                 }
             }
         }
 
         // session picker ("Recents")
-        Rectangle {
+        Item {
             visible: panel.sessionsOpen
             anchors { top: rule.bottom; left: parent.left; right: parent.right; bottom: composer.top; margins: 8 }
-            radius: 12
-            color: panel.bg
-            border.width: 1
-            border.color: panel.line
-
-            Text {
+            z: 4
+            Elevation { anchors.fill: parent; radius: Style.radius - 4 }
+            Rectangle {
+                anchors.fill: parent
+                radius: Style.radius - 4
+                color: Style.bgElevated
+                border.width: 1
+                border.color: Style.lineHi
+            }
+            Caption {
                 id: recents
-                x: 12; y: 10
+                x: 14; y: 12
                 text: "Recents"
-                color: panel.dim
-                font.family: panel.sans; font.pixelSize: 11; font.weight: Font.Medium
             }
 
             ListView {
@@ -979,14 +1061,15 @@ PanelWindow {
                     required property var model
                     readonly property bool current: srow.model.id === panel.sessionId
                     width: ListView.view.width
-                    height: 44
-                    radius: 9
-                    color: sHover.containsMouse || current ? panel.surface : "transparent"
+                    height: 46
+                    radius: Style.controlRadius
+                    color: sHover.containsMouse || current ? Style.surface : "transparent"
+                    Behavior on color { ColorMotion {} }
                     Rectangle {   // current chat marker
                         visible: srow.current
                         x: 0; anchors.verticalCenter: parent.verticalCenter
                         width: 3; height: 18; radius: 1.5
-                        color: panel.accent
+                        color: Style.accent
                     }
                     Column {
                         anchors { left: parent.left; right: parent.right; leftMargin: 12; rightMargin: 10; verticalCenter: parent.verticalCenter }
@@ -994,22 +1077,33 @@ PanelWindow {
                         Text {
                             width: parent.width
                             text: srow.model.title
-                            color: panel.fg
-                            font.family: panel.sans; font.pixelSize: 12
+                            color: Style.fg
+                            font.family: Style.sans; font.pixelSize: 12
                             elide: Text.ElideRight
                         }
                         Row {
                             spacing: 6
                             Text {
                                 text: srow.model.cwd.replace(/^\/home\/[^/]+/, "~") + " · " + panel.ago(srow.model.mtime)
-                                color: panel.dim
-                                font.family: panel.sans; font.pixelSize: 10
+                                color: Style.muted
+                                font.family: Style.sans; font.pixelSize: 10
+                                anchors.verticalCenter: parent.verticalCenter
                             }
-                            Text {
+                            Rectangle {   // pill
                                 visible: srow.model.owned || srow.model.live
-                                text: srow.model.owned ? panel.spark + " robot" : "● live"
-                                color: panel.accent
-                                font.family: panel.sans; font.pixelSize: 10
+                                height: 15; radius: 7.5
+                                width: pill.implicitWidth + 12
+                                color: Style.alpha(Style.accent, 0.1)
+                                border.width: 1
+                                border.color: Style.lineAccent
+                                anchors.verticalCenter: parent.verticalCenter
+                                Caption {
+                                    id: pill
+                                    anchors.centerIn: parent
+                                    text: srow.model.owned ? "robot" : "live"
+                                    color: Style.accentHi
+                                    font.pixelSize: 8
+                                }
                             }
                         }
                     }
@@ -1030,10 +1124,14 @@ PanelWindow {
             visible: panel.ask0 !== null
             anchors { left: parent.left; right: parent.right; bottom: composer.top; leftMargin: 10; rightMargin: 10; bottomMargin: 6 }
             height: askCol.implicitHeight + 24
-            radius: 14
-            color: panel.surface
+            radius: Style.radius
+            gradient: Gradient {
+                GradientStop { position: 0; color: Style.cardTop }
+                GradientStop { position: 1; color: Style.cardBottom }
+            }
             border.width: 1
-            border.color: panel.alpha(panel.accent, 0.4)
+            border.color: Style.lineAccent
+            Spotlight { radius: askCard.radius }
 
             readonly property var q: panel.asking ? panel.ask0.questions[panel.qIndex] : null
 
@@ -1051,16 +1149,16 @@ PanelWindow {
                     textFormat: Text.StyledText
                     text: !panel.ask0 || panel.asking ? ""
                         : "Allow <b>" + panel.esc(panel.ask0.title || panel.toolName(panel.ask0.tool)) + "</b>?"
-                    color: panel.fg
-                    font.family: panel.sans; font.pixelSize: 13
+                    color: Style.fg
+                    font.family: Style.sans; font.pixelSize: 13
                 }
                 Text {
                     visible: !panel.asking && text !== ""
                     width: parent.width
                     wrapMode: Text.Wrap
                     text: panel.ask0 && !panel.asking ? (panel.ask0.desc || (panel.ask0.code ? "" : panel.ask0.arg || "")) : ""
-                    color: panel.text2
-                    font.family: panel.sans; font.pixelSize: 12
+                    color: Style.subtle
+                    font.family: Style.sans; font.pixelSize: 12
                 }
                 CodeBlock {
                     visible: panel.ask0 !== null && !panel.asking && panel.ask0.code !== ""
@@ -1083,22 +1181,23 @@ PanelWindow {
                     spacing: 8
                     Rectangle {
                         visible: askCard.q !== null && !!askCard.q.header
-                        height: 18; radius: 5
-                        width: hdr.implicitWidth + 12
-                        color: panel.alpha(panel.accent, 0.2)
-                        Text {
+                        height: 18; radius: 9
+                        width: hdr.implicitWidth + 14
+                        color: Style.alpha(Style.accent, 0.1)
+                        border.width: 1
+                        border.color: Style.lineAccent
+                        Caption {
                             id: hdr
                             anchors.centerIn: parent
                             text: askCard.q ? (askCard.q.header || "") : ""
-                            color: panel.accentHi
-                            font.family: panel.sans; font.pixelSize: 10; font.weight: Font.Medium
+                            color: Style.accentHi
                         }
                     }
                     Text {
                         visible: panel.asking && panel.ask0.questions.length > 1
                         text: panel.asking ? (panel.qIndex + 1) + " of " + panel.ask0.questions.length : ""
-                        color: panel.dim
-                        font.family: panel.sans; font.pixelSize: 10
+                        color: Style.muted
+                        font.family: Style.sans; font.pixelSize: 10
                         anchors.verticalCenter: parent.verticalCenter
                     }
                 }
@@ -1107,8 +1206,8 @@ PanelWindow {
                     width: parent.width
                     wrapMode: Text.Wrap
                     text: askCard.q ? askCard.q.question : ""
-                    color: panel.fg
-                    font.family: panel.sans; font.pixelSize: 13; font.weight: Font.Medium
+                    color: Style.fg
+                    font.family: Style.sans; font.pixelSize: 13; font.weight: Font.Medium
                 }
                 Repeater {
                     model: askCard.q ? askCard.q.options : []
@@ -1119,10 +1218,12 @@ PanelWindow {
                         readonly property bool picked: panel.qPicked.includes(modelData.label)
                         width: askCol.width
                         height: optCol.implicitHeight + 14
-                        radius: 9
-                        color: optArea.containsMouse || picked ? panel.raised : "transparent"
+                        radius: Style.controlRadius + 2
+                        color: optArea.containsMouse || picked ? Style.surfaceHover : Style.surface
+                        Behavior on color { ColorMotion {} }
                         border.width: 1
-                        border.color: picked ? panel.accent : panel.line
+                        border.color: picked ? Style.accent : optArea.containsMouse ? Style.lineHi : Style.line
+                        Behavior on border.color { ColorMotion {} }
                         Column {
                             id: optCol
                             x: 10; y: 7
@@ -1132,16 +1233,16 @@ PanelWindow {
                                 width: parent.width
                                 wrapMode: Text.Wrap
                                 text: (opt.index + 1) + ". " + opt.modelData.label
-                                color: panel.fg
-                                font.family: panel.sans; font.pixelSize: 13
+                                color: Style.fg
+                                font.family: Style.sans; font.pixelSize: 13
                             }
                             Text {
                                 visible: !!opt.modelData.description
                                 width: parent.width
                                 wrapMode: Text.Wrap
                                 text: opt.modelData.description || ""
-                                color: panel.dim
-                                font.family: panel.sans; font.pixelSize: 11
+                                color: Style.muted
+                                font.family: Style.sans; font.pixelSize: 11
                             }
                         }
                         MouseArea {
@@ -1161,11 +1262,11 @@ PanelWindow {
                         label: "Next"; primary: true
                         onClicked: if (panel.qPicked.length) panel.answer(panel.qPicked.join(", "))
                     }
-                    AskButton { label: "Skip"; onClicked: panel.skipQuestion() }
+                    AskButton { label: "Skip"; variant: "ghost"; onClicked: panel.skipQuestion() }
                     Text {
                         text: "or type your own answer below"
-                        color: panel.dim
-                        font.family: panel.sans; font.pixelSize: 11
+                        color: Style.muted
+                        font.family: Style.sans; font.pixelSize: 11
                         anchors.verticalCenter: parent.verticalCenter
                     }
                 }
@@ -1179,15 +1280,25 @@ PanelWindow {
             anchors { left: parent.left; right: parent.right; bottom: parent.bottom; margins: 10; bottomMargin: 8 }
             height: box.height + 4 + controls.height
 
+            Rectangle {   // focus ring: 2 px accent, 2 px off the box
+                anchors { fill: box; margins: -4 }
+                radius: box.radius + 4
+                color: "transparent"
+                border.width: 2
+                border.color: Style.alpha(Style.accent, 0.5)
+                opacity: input.activeFocus ? 1 : 0
+                Behavior on opacity { Motion { duration: Style.quick } }
+            }
             Rectangle {
                 id: box
                 anchors { top: parent.top; left: parent.left; right: parent.right }
                 height: Math.min(170, Math.max(36, input.implicitHeight) + 12)
-                radius: 14
-                color: panel.surface
+                radius: Style.controlRadius + 4
+                color: Style.inputBg
                 border.width: 1
-                border.color: input.activeFocus ? panel.lineHi : panel.line
-                Behavior on border.color { ColorAnimation { duration: 150 } }
+                border.color: input.activeFocus ? Style.accent : boxHover.hovered ? Style.lineHi : Style.line
+                Behavior on border.color { ColorMotion {} }
+                HoverHandler { id: boxHover }
 
                 ScrollView {
                     anchors { top: parent.top; left: parent.left; right: sendBtn.left; bottom: parent.bottom
@@ -1196,12 +1307,12 @@ PanelWindow {
                         id: input
                         placeholderText: panel.asking ? "Type your own answer…"
                                        : panel.busy ? panel.aiName + " is replying…"
-                                       : messages.count === 0 ? (panel.theme.welcome || "How can I help?") : "Reply to " + panel.aiName + "…"
-                        placeholderTextColor: panel.dim
-                        color: panel.fg
-                        font.family: panel.sans; font.pixelSize: 14
+                                       : messages.count === 0 ? Style.welcome : "Reply to " + panel.aiName + "…"
+                        placeholderTextColor: Style.alpha(Style.muted, 0.8)
+                        color: Style.fg
+                        font.family: Style.sans; font.pixelSize: 14
                         wrapMode: TextArea.Wrap
-                        selectionColor: panel.alpha(panel.accent, 0.4)
+                        selectionColor: Style.alpha(Style.accent, 0.4)
                         background: null
                         Keys.onReturnPressed: event => {
                             if (event.modifiers & Qt.ShiftModifier) event.accepted = false
@@ -1224,21 +1335,41 @@ PanelWindow {
                     anchors.right: parent.right
                     anchors.rightMargin: (box.height - height) / 2 > 10 ? 8 : (box.height - height) / 2
                     y: input.lineCount <= 1 ? (box.height - height) / 2 : box.height - height - 8
-                    width: 28; height: 28; radius: 8
-                    color: !ready ? panel.accentDim : sendHover.containsMouse ? panel.accentHi : panel.accent
-                    Behavior on color { ColorAnimation { duration: 120 } }
+                    width: 28; height: 28; radius: Style.controlRadius
+                    color: !ready ? Style.accentDim : sendHover.containsMouse ? Style.accentHi : Style.accent
+                    Behavior on color { ColorMotion {} }
+                    scale: sendHover.pressed ? 0.98 : 1
+                    Behavior on scale { Motion { duration: Style.quick } }
+                    Accessible.role: Accessible.Button
+                    Accessible.name: stopping ? "Stop" : "Send"
+                    Elevation {   // accent glow once there's something to send
+                        anchors.fill: parent
+                        z: -1
+                        radius: parent.radius
+                        glow: sendBtn.ready
+                        lifted: sendHover.containsMouse && sendBtn.ready
+                        depth: 0.35
+                        opacity: sendBtn.ready ? 1 : 0
+                        Behavior on opacity { Motion {} }
+                    }
+                    Rectangle {   // inset highlight
+                        anchors { top: parent.top; topMargin: 1; horizontalCenter: parent.horizontalCenter }
+                        width: parent.width - parent.radius
+                        height: 1
+                        color: Style.alpha("#ffffff", sendBtn.ready ? 0.2 : 0.06)
+                    }
                     Text {
                         visible: !sendBtn.stopping
                         anchors.centerIn: parent
                         text: "↑"
-                        color: sendBtn.ready ? panel.onAccent : panel.alpha(panel.onAccent, 0.5)
-                        font.family: panel.sans; font.pixelSize: 16; font.bold: true
+                        color: sendBtn.ready ? Style.onAccent : Style.alpha(Style.onAccent, 0.5)
+                        font.family: Style.sans; font.pixelSize: 16; font.bold: true
                     }
                     Rectangle {   // stop: a drawn square, the ■ glyph sits off-centre
                         visible: sendBtn.stopping
                         anchors.centerIn: parent
                         width: 10; height: 10; radius: 2
-                        color: panel.onAccent
+                        color: Style.onAccent
                     }
                     MouseArea {
                         id: sendHover
@@ -1261,15 +1392,16 @@ PanelWindow {
 
                     Rectangle {   // permission mode (when the backend has one)
                         visible: !!panel.backend.mode
-                        height: 26; radius: 7
+                        height: 26; radius: Style.controlRadius
                         width: modeText.implicitWidth + 14
-                        color: modeArea.containsMouse ? panel.surface : "transparent"
+                        color: modeArea.containsMouse ? Style.surface : "transparent"
+                        Behavior on color { ColorMotion {} }
                         Text {
                             id: modeText
                             anchors.centerIn: parent
                             text: panel.backend.mode ? panel.backend.mode.label : ""
-                            color: panel.text2
-                            font.family: panel.sans; font.pixelSize: 12
+                            color: Style.subtle
+                            font.family: Style.sans; font.pixelSize: 12
                         }
                         MouseArea { id: modeArea; anchors.fill: parent; hoverEnabled: true }
                         Tip { visible: modeArea.containsMouse && !!panel.backend.mode; text: panel.backend.mode ? panel.backend.mode.tip : "" }
@@ -1279,16 +1411,19 @@ PanelWindow {
                     Rectangle {
                         id: chip
                         visible: panel.shotOk
-                        height: 26; radius: 7
+                        height: 26; radius: Style.controlRadius
                         width: chipRow.implicitWidth + 14
-                        color: chipHover.containsMouse ? panel.surface : "transparent"
+                        color: chipHover.containsMouse ? Style.surface : "transparent"
+                        Behavior on color { ColorMotion {} }
                         Row {
                             id: chipRow
                             anchors.centerIn: parent
                             spacing: 6
                             Rectangle {
                                 width: 26; height: 16; radius: 3
-                                color: "#000000"
+                                color: Style.bgDeep
+                                border.width: 1
+                                border.color: Style.lineHi
                                 clip: true
                                 anchors.verticalCenter: parent.verticalCenter
                                 Image {
@@ -1302,8 +1437,8 @@ PanelWindow {
                             }
                             Text {
                                 text: panel.shareScreen ? "Screen" : "Screen off"
-                                color: panel.shareScreen ? panel.text2 : panel.dim
-                                font.family: panel.sans; font.pixelSize: 12
+                                color: panel.shareScreen ? Style.subtle : Style.muted
+                                font.family: Style.sans; font.pixelSize: 12
                                 font.strikeout: !panel.shareScreen
                                 anchors.verticalCenter: parent.verticalCenter
                             }
@@ -1327,22 +1462,22 @@ PanelWindow {
                     id: modelBtn
                     visible: panel.models.length > 0
                     anchors { right: parent.right; verticalCenter: parent.verticalCenter }
-                    height: 26; radius: 7
+                    height: 26; radius: Style.controlRadius
                     width: modelRow.implicitWidth + 14
-                    color: modelArea.containsMouse || panel.modelMenuOpen ? panel.surface : "transparent"
-                    Behavior on color { ColorAnimation { duration: 120 } }
+                    color: modelArea.containsMouse || panel.modelMenuOpen ? Style.surface : "transparent"
+                    Behavior on color { ColorMotion {} }
                     Row {
                         id: modelRow
                         anchors.centerIn: parent
                         spacing: 4
                         Text {
                             text: panel.modelLabel
-                            color: modelArea.containsMouse || panel.modelMenuOpen ? panel.fg : panel.text2
-                            font.family: panel.sans; font.pixelSize: 12
+                            color: modelArea.containsMouse || panel.modelMenuOpen ? Style.fg : Style.subtle
+                            font.family: Style.sans; font.pixelSize: 12
                         }
                         Text {
                             text: "⌄"
-                            color: panel.dim
+                            color: Style.muted
                             font.pixelSize: 10
                         }
                     }
@@ -1366,10 +1501,18 @@ PanelWindow {
             anchors { bottom: composer.bottom; bottomMargin: 32; right: composer.right }
             width: 250
             height: menuCol.implicitHeight + 12
-            radius: 12
-            color: panel.surface
+            radius: Style.radius - 4
+            color: Style.bgElevated
             border.width: 1
-            border.color: panel.lineHi
+            border.color: Style.lineHi
+            onVisibleChanged: if (visible) menuIn.restart()
+            transform: Translate { id: menuRise }
+            ParallelAnimation {
+                id: menuIn
+                Motion { target: modelMenu; property: "opacity"; from: 0; to: 1; duration: Style.quick }
+                Motion { target: menuRise; property: "y"; from: 6; to: 0 }
+            }
+            Elevation { anchors.fill: parent; z: -1; radius: parent.radius }
             Column {
                 id: menuCol
                 x: 6; y: 6
@@ -1382,22 +1525,23 @@ PanelWindow {
                         readonly property bool current: modelData.id === panel.activeAlias
                         width: menuCol.width
                         height: 46
-                        radius: 8
-                        color: mArea.containsMouse ? panel.raised : "transparent"
+                        radius: Style.controlRadius
+                        color: mArea.containsMouse ? Style.surface : "transparent"
+                        Behavior on color { ColorMotion {} }
                         Column {
                             anchors { left: parent.left; leftMargin: 10; right: check.left; verticalCenter: parent.verticalCenter }
                             spacing: 2
                             Text {
                                 text: mrow.modelData.name
-                                color: panel.fg
-                                font.family: panel.sans; font.pixelSize: 13
+                                color: Style.fg
+                                font.family: Style.sans; font.pixelSize: 13
                             }
                             Text {
                                 width: parent.width
                                 visible: text !== ""
                                 text: mrow.modelData.blurb || ""
-                                color: panel.dim
-                                font.family: panel.sans; font.pixelSize: 10
+                                color: Style.muted
+                                font.family: Style.sans; font.pixelSize: 10
                                 elide: Text.ElideRight
                             }
                         }
@@ -1405,7 +1549,7 @@ PanelWindow {
                             id: check
                             anchors { right: parent.right; rightMargin: 10; verticalCenter: parent.verticalCenter }
                             text: mrow.current ? "✓" : ""
-                            color: panel.accent
+                            color: Style.accent
                             font.pixelSize: 14
                         }
                         MouseArea {

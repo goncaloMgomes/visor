@@ -99,7 +99,7 @@ Add `backend/backends/<name>.py` with a `Backend(cfg)` class and register it in 
 **`info()`** tells the popup what to show:
 
 ```json
-{ "id": "my-ai", "name": "My AI", "theme": "neutral",
+{ "id": "my-ai", "name": "My AI",
   "models": [{"id": "fast", "name": "Fast", "blurb": "Quick answers"}], "defaultModel": "fast",
   "mode": {"label": "Ask", "tip": "Asks before acting"},
   "features": {"permissions": true, "questions": false, "terminal": false, "modelSwitch": true},
