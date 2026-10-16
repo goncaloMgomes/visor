@@ -82,7 +82,9 @@ PanelWindow {
     readonly property real maxH: (screen ? screen.height : 1200) - 70
     implicitWidth: maxW
     implicitHeight: maxH
-    mask: Region { item: frame }
+    // the panel's final place (the frame's entrance animation scales and moves
+    // it, and a Region taken mid-animation left the bottom strip unclickable)
+    mask: Region { item: hitArea }
 
     // size (drag the left/bottom edges) and model choice, remembered
     property real panelW: 420
@@ -122,6 +124,20 @@ PanelWindow {
     property string currentAlias: ""         // …as one of `models` ("" = unknown)
     property string currentLabel: ""
     property bool modelMenuOpen: false
+    // permission mode (Ask / Edits / Auto / Plan…), when the backend has modes
+    readonly property var modes: backend.modes || []
+    property string savedMode: ""            // the user's pick, remembered in chat.json
+    readonly property string modeId: modes.some(x => x.id === savedMode) ? savedMode : (backend.mode ? backend.mode.id || "" : "")
+    readonly property var modeInfo: modes.find(x => x.id === modeId) || backend.mode || null
+    property bool modeMenuOpen: false
+    function chooseMode(id) {
+        modeMenuOpen = false
+        if (id === modeId) return
+        savedMode = id
+        savePrefs()
+        // takes effect right away, also in the middle of a reply
+        if (bridgeUp) command({ op: "mode", mode: id })
+    }
     readonly property string activeAlias: currentAlias || model
     readonly property string modelLabel: {
         if (currentLabel) return currentLabel
@@ -150,6 +166,7 @@ PanelWindow {
                 if (p.w) panel.panelW = panel.clampW(p.w)
                 if (p.h) panel.panelH = panel.clampH(p.h)
                 if (p.model) panel.savedModel = p.model
+                if (p.mode) panel.savedMode = p.mode
                 if (p.last && p.last.id) panel.saved = p.last
             } catch (e) {}
         }
@@ -157,7 +174,7 @@ PanelWindow {
     function savePrefs() {
         if (sessionId) saved = { id: sessionId, at: lastActive }
         Quickshell.execDetached(["mkdir", "-p", stateHome])
-        prefs.setText(JSON.stringify({ w: panelW, h: panelH, model: savedModel, last: saved }))
+        prefs.setText(JSON.stringify({ w: panelW, h: panelH, model: savedModel, mode: savedMode, last: saved }))
     }
     function touch() { lastActive = Date.now(); savePrefs() }
 
@@ -192,7 +209,7 @@ PanelWindow {
 
     onOpenChanged: {
         if (open) { input.forceActiveFocus(); resumeCheck(); enter.restart() }
-        else { stopArmed = false; modelMenuOpen = false }
+        else { stopArmed = false; modelMenuOpen = false; modeMenuOpen = false }
     }
 
     // colours, type, radii and motion: Style.qml (the theme's tokens)
@@ -266,7 +283,7 @@ PanelWindow {
         else queued.push(c)
     }
     function startBridge(id, cwd, fork) {
-        bridgeCmd = [helper, "bridge", id || "new", cwd || "", model, fork ? "1" : "0"]
+        bridgeCmd = [helper, "bridge", id || "new", cwd || "", model, fork ? "1" : "0", modeId]
         queued = []
         if (bridge.running) { restarting = true; bridgeUp = false; bridge.running = false }
         else launchBridge()
@@ -564,6 +581,13 @@ PanelWindow {
         Motion { target: frame; property: "scale"; from: 0.98; to: 1 }
     }
     Item {
+        id: hitArea
+        anchors { top: parent.top; right: parent.right
+                  topMargin: panel.chatTop - panel.margins.top; rightMargin: panel.chatRight - panel.margins.right }
+        width: panel.panelW
+        height: panel.panelH
+    }
+    Item {
         id: frame
         anchors { top: parent.top; right: parent.right
                   topMargin: panel.chatTop - panel.margins.top; rightMargin: panel.chatRight - panel.margins.right }
@@ -596,7 +620,7 @@ PanelWindow {
             }
         }
 
-        Keys.onEscapePressed: { if (panel.modelMenuOpen) panel.modelMenuOpen = false; else panel.open = false }
+        Keys.onEscapePressed: { if (panel.modelMenuOpen || panel.modeMenuOpen) { panel.modelMenuOpen = false; panel.modeMenuOpen = false } else panel.open = false }
 
         // header: spark, session title (opens the picker), actions
         Item {
@@ -709,10 +733,11 @@ PanelWindow {
             ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
             onCountChanged: positionViewAtEnd()
             // new messages fade up 8 px (history loads without animating)
+            // fade in only: animating y left rows at stale positions (overlapping)
+            // whenever a row above grew while the animation ran
             add: Transition {
                 enabled: panel.historyDone && !Style.reducedMotion
                 Motion { property: "opacity"; from: 0; to: 1 }
-                Motion { property: "y"; from: ViewTransition.destination.y + 8; to: ViewTransition.destination.y }
             }
 
             // mouse wheel notches start a flick, so they use the same physics as a
@@ -1319,7 +1344,7 @@ PanelWindow {
                             else panel.send()
                         }
                         Keys.onEscapePressed: event => {
-                            if (panel.modelMenuOpen) panel.modelMenuOpen = false
+                            if (panel.modelMenuOpen || panel.modeMenuOpen) { panel.modelMenuOpen = false; panel.modeMenuOpen = false }
                             else if (panel.busy) panel.stop()
                             else panel.open = false
                         }
@@ -1390,21 +1415,36 @@ PanelWindow {
                     anchors { left: parent.left; verticalCenter: parent.verticalCenter }
                     spacing: 2
 
-                    Rectangle {   // permission mode (when the backend has one)
-                        visible: !!panel.backend.mode
+                    Rectangle {   // permission mode (when the backend has one): click to change
+                        visible: !!panel.modeInfo
                         height: 26; radius: Style.controlRadius
-                        width: modeText.implicitWidth + 14
-                        color: modeArea.containsMouse ? Style.surface : "transparent"
+                        width: modeRow.implicitWidth + 14
+                        color: modeArea.containsMouse || panel.modeMenuOpen ? Style.surface : "transparent"
                         Behavior on color { ColorMotion {} }
-                        Text {
-                            id: modeText
+                        Row {
+                            id: modeRow
                             anchors.centerIn: parent
-                            text: panel.backend.mode ? panel.backend.mode.label : ""
-                            color: Style.subtle
-                            font.family: Style.sans; font.pixelSize: 12
+                            spacing: 4
+                            Text {
+                                text: panel.modeInfo ? panel.modeInfo.label : ""
+                                color: modeArea.containsMouse || panel.modeMenuOpen ? Style.fg : Style.subtle
+                                font.family: Style.sans; font.pixelSize: 12
+                            }
+                            Text {
+                                visible: panel.modes.length > 1
+                                text: "⌄"
+                                color: Style.muted
+                                font.pixelSize: 10
+                            }
                         }
-                        MouseArea { id: modeArea; anchors.fill: parent; hoverEnabled: true }
-                        Tip { visible: modeArea.containsMouse && !!panel.backend.mode; text: panel.backend.mode ? panel.backend.mode.tip : "" }
+                        MouseArea {
+                            id: modeArea
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: panel.modes.length > 1 ? Qt.PointingHandCursor : Qt.ArrowCursor
+                            onClicked: if (panel.modes.length > 1) { panel.modelMenuOpen = false; panel.modeMenuOpen = !panel.modeMenuOpen }
+                        }
+                        Tip { visible: modeArea.containsMouse && !panel.modeMenuOpen && !!panel.modeInfo; text: panel.modeInfo ? panel.modeInfo.tip : "" }
                     }
 
                     // screenshot chip: what the AI will see; click to stop sharing
@@ -1486,7 +1526,7 @@ PanelWindow {
                         anchors.fill: parent
                         hoverEnabled: true
                         cursorShape: panel.busy ? Qt.ArrowCursor : Qt.PointingHandCursor
-                        onClicked: if (!panel.busy && panel.models.length > 1) panel.modelMenuOpen = !panel.modelMenuOpen
+                        onClicked: if (!panel.busy && panel.models.length > 1) { panel.modeMenuOpen = false; panel.modelMenuOpen = !panel.modelMenuOpen }
                     }
                     Tip { visible: modelArea.containsMouse && panel.busy; text: "Change the model once " + panel.aiName + " has finished" }
                 }
@@ -1558,6 +1598,77 @@ PanelWindow {
                             hoverEnabled: true
                             cursorShape: Qt.PointingHandCursor
                             onClicked: panel.chooseModel(mrow.modelData.id)
+                        }
+                    }
+                }
+            }
+        }
+
+        // permission-mode menu, opening upward from the mode chip
+        Rectangle {
+            id: modeMenu
+            visible: panel.modeMenuOpen
+            z: 5
+            anchors { bottom: composer.bottom; bottomMargin: 32; left: composer.left }
+            width: 360
+            height: modeCol.implicitHeight + 12
+            radius: Style.radius - 4
+            color: Style.bgElevated
+            border.width: 1
+            border.color: Style.lineHi
+            onVisibleChanged: if (visible) modeIn.restart()
+            transform: Translate { id: modeRise }
+            ParallelAnimation {
+                id: modeIn
+                Motion { target: modeMenu; property: "opacity"; from: 0; to: 1; duration: Style.quick }
+                Motion { target: modeRise; property: "y"; from: 6; to: 0 }
+            }
+            Elevation { anchors.fill: parent; z: -1; radius: parent.radius }
+            Column {
+                id: modeCol
+                x: 6; y: 6
+                width: parent.width - 12
+                Repeater {
+                    model: panel.modes
+                    delegate: Rectangle {
+                        id: drow
+                        required property var modelData
+                        readonly property bool current: modelData.id === panel.modeId
+                        width: modeCol.width
+                        height: 46
+                        radius: Style.controlRadius
+                        color: dArea.containsMouse ? Style.surface : "transparent"
+                        Behavior on color { ColorMotion {} }
+                        Column {
+                            anchors { left: parent.left; leftMargin: 10; right: dcheck.left; verticalCenter: parent.verticalCenter }
+                            spacing: 2
+                            Text {
+                                text: drow.modelData.label
+                                color: Style.fg
+                                font.family: Style.sans; font.pixelSize: 13
+                            }
+                            Text {
+                                width: parent.width
+                                visible: text !== ""
+                                text: drow.modelData.tip || ""
+                                color: Style.muted
+                                font.family: Style.sans; font.pixelSize: 10
+                                elide: Text.ElideRight
+                            }
+                        }
+                        Text {
+                            id: dcheck
+                            anchors { right: parent.right; rightMargin: 10; verticalCenter: parent.verticalCenter }
+                            text: drow.current ? "✓" : ""
+                            color: Style.accent
+                            font.pixelSize: 14
+                        }
+                        MouseArea {
+                            id: dArea
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: panel.chooseMode(drow.modelData.id)
                         }
                     }
                 }

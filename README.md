@@ -18,7 +18,7 @@ All the faces and what triggers them: [docs/faces.md](docs/faces.md).
 ## What it does
 
 - **Follows your AI.** Moods come from adapters: Claude Code hooks, the Codex CLI notify script, or `visor signal` from anything else. When a long task finishes or needs approval, a speech balloon tells you, and clicking it opens that chat.
-- **Chat popup.** Click the robot. Replies stream in, tool calls fold into one line, and permission requests and questions appear as buttons. It sees a screenshot of what you were doing (you can turn that off). There's a model picker and a list of recent chats.
+- **Chat popup.** Click the robot. Replies stream in, tool calls fold into one line, and permission requests and questions appear as buttons. It sees a screenshot of what you were doing (you can turn that off). There's a model picker, a permission-mode switch (Ask, Edits, Auto, Plan) and a list of recent chats.
 - **Optional computer use** on Hyprland: the AI can click, type and switch windows for you, asking first.
 - **Lives with you.** It bops along to music (MPRIS), gets sleepy at night, naps when you're away, greets you with the weather, and notices chargers, Bluetooth headphones, USB devices and volume changes. With the AI's help, its remarks are freshly written every few hours.
 - **Light.** About 11 % of one CPU core while animating, with no daemons beyond Quickshell.
@@ -34,12 +34,6 @@ visor doctor                 # what works on this machine
 visor setup claude-code      # if you use Claude Code: adds the hooks (backs up settings.json)
 visor                        # start it
 ```
-
-Arch: `packaging/arch/PKGBUILD` (AUR package `visor-git`).
-
-The first time it starts next to a Waybar with no room for it, the robot makes some: it squeezes in from the screen edge and shoves the end of the bar over. That sets `"margin-right"` on your bar, tagged with a `/* visor */` comment and backed up first. `visor setup waybar --remove` gives the room back.
-
-<img src="docs/gifs/make-room.gif" alt="The robot shoving the end of Waybar over to make room" width="400">
 
 To start it with your desktop, use `systemctl --user enable --now visor.service`, or `exec-once = visor` (Hyprland) / `exec visor` (Sway). See [docs/hyprland.md](docs/hyprland.md) for placement, brightness keys and the Hyprland extras.
 

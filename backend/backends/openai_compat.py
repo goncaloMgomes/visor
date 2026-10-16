@@ -146,7 +146,7 @@ class Api:
 
 # ------------------------------------------------------------------ one chat
 class Bridge:
-    def __init__(self, be, session, cwd, model, fork):
+    def __init__(self, be, session, cwd, model, fork, mode=""):
         self.be = be
         self.api = Api(be.opts)
         self.model = model if model in be.model_ids() else be.default_model()
@@ -157,7 +157,7 @@ class Bridge:
         self.pending = {}           # permission id -> [Event, answer]
         self.mcp = None
         self.computer = bool(be.cfg["chat"].get("computerUse"))
-        self.ask = be.cfg["chat"].get("permissionMode") not in ("auto", "bypassPermissions")
+        self.ask = (mode or be.cfg["chat"].get("permissionMode")) not in ("auto", "bypassPermissions")
 
     def system(self):
         extra = self.be.opts.get("systemPrompt") or ""
@@ -311,6 +311,8 @@ class Bridge:
                 threading.Thread(target=self.turn, args=(c,), daemon=True).start()
             elif op == "stop" and self.busy:
                 self.stopping = True
+            elif op == "mode":
+                self.ask = c.get("mode") not in ("auto", "bypassPermissions")
             elif op == "model" and c.get("model") in self.be.model_ids():
                 self.model = c["model"]
             elif op == "permit":
@@ -369,10 +371,12 @@ class Backend:
             "name": self.opts.get("name") or "Assistant",
             "models": self.models(),
             "defaultModel": self.default_model(),
-            "mode": ({"label": "Ask" if ask else "Auto",
+            "mode": ({"id": "default" if ask else "auto", "label": "Ask" if ask else "Auto",
                       "tip": "Asks before using the mouse or keyboard" if ask else "Uses the mouse and keyboard without asking"}
                      if computer else None),
-            "features": {"permissions": computer and ask, "questions": False, "terminal": False,
+            "modes": [{"id": "default", "label": "Ask", "tip": "Asks before using the mouse or keyboard"},
+                      {"id": "auto", "label": "Auto", "tip": "Uses the mouse and keyboard without asking"}] if computer else [],
+            "features": {"permissions": computer, "questions": False, "terminal": False,
                          "modelSwitch": True, "recentsFromElsewhere": False},
             "available": bool(self.default_model()) and bool(self.opts.get("baseUrl")),
         }
@@ -397,8 +401,8 @@ class Backend:
                         "mtime": int(os.path.getmtime(p)), "live": False, "owned": True, "url": ""})
         return out
 
-    def bridge(self, session, cwd, model, fork):
-        Bridge(self, session, cwd, model, fork).run()
+    def bridge(self, session, cwd, model, fork, mode=""):
+        Bridge(self, session, cwd, model, fork, mode).run()
 
     def summary(self, path):
         try:

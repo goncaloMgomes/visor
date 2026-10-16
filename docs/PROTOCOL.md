@@ -67,7 +67,7 @@ Writing a new adapter: map the tool's events onto the moods above. See `hook.sh`
 
 ## 2. Chat backends
 
-The popup starts `backend/chat.py bridge <session|new> <cwd> <model> <fork 0|1>` and talks to it in JSON lines. The bridge loads the backend named by `backend` in the config.
+The popup starts `backend/chat.py bridge <session|new> <cwd> <model> <fork 0|1> [mode]` and talks to it in JSON lines. The bridge loads the backend named by `backend` in the config.
 
 ### Included
 
@@ -101,12 +101,14 @@ Add `backend/backends/<name>.py` with a `Backend(cfg)` class and register it in 
 ```json
 { "id": "my-ai", "name": "My AI",
   "models": [{"id": "fast", "name": "Fast", "blurb": "Quick answers"}], "defaultModel": "fast",
-  "mode": {"label": "Ask", "tip": "Asks before acting"},
+  "mode": {"id": "default", "label": "Ask", "tip": "Asks before acting"},
+  "modes": [{"id": "default", "label": "Ask", "tip": "Asks before acting"},
+            {"id": "auto", "label": "Auto", "tip": "Acts without asking"}],
   "features": {"permissions": true, "questions": false, "terminal": false, "modelSwitch": true},
   "available": true }
 ```
 
-Set `mode: null` to hide the mode chip and `models: []` to hide the model picker. `available: false` makes the popup say it isn't set up.
+`mode` is the configured permission mode; with more than one entry in `modes`, clicking the chip switches between them (the popup remembers the pick and passes it as the bridge's `mode` argument). Set `mode: null` to hide the chip and `models: []` to hide the model picker. `available: false` makes the popup say it isn't set up.
 
 **The bridge.** Commands arrive on stdin, one JSON object per line:
 
@@ -115,6 +117,7 @@ Set `mode: null` to hide the mode chip and `models: []` to hide the model picker
 | `send` | `text`, `screenshot` (path or ""), `window` | a message from the user |
 | `stop` | | interrupt the reply |
 | `model` | `model` | switch model (also mid-chat) |
+| `mode` | `mode` | switch permission mode (an `id` from `modes`; also mid-chat) |
 | `permit` | `id`, `allow`, `always`, `answers`, `message` | answer a `permission` event |
 | `release` | | free resources (e.g. before the chat continues in a terminal) |
 

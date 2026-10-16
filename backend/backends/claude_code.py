@@ -28,7 +28,7 @@ PASTE_RE = re.compile(r"</?pasted_content[^>]*>")
 # text Claude Code itself puts in the user's turn (command output, compaction notes)
 HARNESS_PREFIXES = ("<", "[Request interrupted", "This session is being continued from a previous conversation",
                     "Caveat: The messages below")
-MODES = {
+MODES = {   # id -> (label, tip); the popup's mode menu lists all but bypassPermissions
     "default": ("Ask", "Claude asks before editing files or running commands"),
     "acceptEdits": ("Edits", "Claude edits files without asking, and asks before running commands"),
     "auto": ("Auto", "Auto mode: Claude acts without asking, risky actions are blocked"),
@@ -168,8 +168,9 @@ def mcp_config():
 
 # ------------------------------------------------------------------ one chat
 class Bridge:
-    def __init__(self, be, session, cwd, model, fork):
+    def __init__(self, be, session, cwd, model, fork, mode=""):
         self.be = be
+        self.perm = mode if mode in MODES else be.mode()
         self.sid = "" if session in ("", "new") else session
         self.cwd = cwd if cwd and os.path.isdir(cwd) else be.default_cwd()
         self.model = model if model in be.model_ids() else be.default_model()
@@ -188,7 +189,7 @@ class Bridge:
         chat = self.be.cfg["chat"]
         cmd = [self.be.claude(), "-p", "--input-format", "stream-json", "--output-format", "stream-json",
                "--include-partial-messages", "--verbose",
-               "--model", self.model, "--permission-mode", self.be.mode(),
+               "--model", self.model, "--permission-mode", self.perm,
                "--permission-prompt-tool", "stdio",
                "--append-system-prompt", popup_prompt(chat.get("computerUse")), "--add-dir", RUN_DIR]
         if chat.get("computerUse"):
@@ -384,6 +385,11 @@ class Bridge:
                 if c.get("model") in self.be.model_ids():
                     self.model = c["model"]
                     self.control({"subtype": "set_model", "model": self.model})
+            elif op == "mode":
+                if c.get("mode") in MODES:
+                    self.perm = c["mode"]
+                    if self.proc and self.proc.poll() is None:
+                        self.control({"subtype": "set_permission_mode", "mode": self.perm})
             elif op == "permit":
                 self.permit(c)
             elif op == "release":
@@ -423,7 +429,9 @@ class Backend:
             "name": "Claude",
             "models": self.opts.get("models") or [],
             "defaultModel": self.default_model(),
-            "mode": {"label": label, "tip": tip},
+            "mode": {"id": self.mode(), "label": label, "tip": tip},
+            "modes": [{"id": k, "label": v[0], "tip": v[1]} for k, v in MODES.items()
+                      if k != "bypassPermissions" or self.mode() == k],
             "features": {"permissions": True, "questions": True, "terminal": True,
                          "modelSwitch": True, "recentsFromElsewhere": True},
             "terminalLabel": "Continue in Claude Code (terminal)",
@@ -471,8 +479,8 @@ class Backend:
                 break
         return out
 
-    def bridge(self, session, cwd, model, fork):
-        Bridge(self, session, cwd, model, fork).run()
+    def bridge(self, session, cwd, model, fork, mode=""):
+        Bridge(self, session, cwd, model, fork, mode).run()
 
     def summary(self, path):
         title, last = None, ""

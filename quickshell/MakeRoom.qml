@@ -7,7 +7,9 @@ import QtQuick
 // it squeezes in: a snapshot of the bar covers the real one while Waybar
 // restarts with a right margin (backend/waybar.py), then the robot slides in
 // from the screen edge and shoves the bar's end over, twice, into its new
-// place. The snapshot fades into the real (restarted) bar and the real robot
+// place. The snapshot is never stretched or moved (a see-through bar has the
+// wallpaper in it, which would move too): it's cut off at the robot's side and
+// fades into the real, restarted bar as the robot pushes. Then the real robot
 // takes over. With reduced motion, or without the bar's geometry, it just
 // makes the room.
 Scope {
@@ -27,6 +29,9 @@ Scope {
     property string mood: "curious"
     property bool ready: false              // Waybar is back, with the margin
     property bool changed: false
+    property real fade: 1
+    // 0 at the peek, 1 in the final place
+    readonly property real progress: Math.max(0, Math.min(1, (peekX - rx) / Math.max(1, peekX - finalX)))
     readonly property real screenW: screen ? screen.width : 1920
     readonly property real peekX: screenW - 24   // half in view, already pushing
     readonly property real barEnd: bar ? bar.x + bar.w : 0
@@ -42,7 +47,7 @@ Scope {
         ready = false; changed = false
         rx = screenW + 8
         mood = "curious"
-        shot.opacity = 1
+        fade = 1
         active = true
         if (!bar || Style.reducedMotion) { bar = null; edit.running = true; return }
         // the snapshot first, then Waybar restarts underneath it
@@ -99,7 +104,7 @@ Scope {
             NumberAnimation { target: bot; property: "hop"; to: 0; duration: 260; easing.type: Easing.OutBounce }
         }
         // the snapshot gives way to the real bar
-        NumberAnimation { target: shot; property: "opacity"; to: 0; duration: 220; easing.type: Easing.OutCubic }
+        NumberAnimation { target: room; property: "fade"; to: 0; duration: 220; easing.type: Easing.OutCubic }
         PauseAnimation { duration: 500 }
         ScriptAction { script: room.done() }
     }
@@ -119,18 +124,23 @@ Scope {
         mask: Region {}
         color: "transparent"
 
-        // the bar's snapshot, squeezed from its right end (what's under the
-        // squeezed part is the real bar, restarted with the margin)
+        // the bar's snapshot, cut off at the robot; under it is the real bar,
+        // already restarted with the margin
         Item {
             id: shot
             x: room.bar ? room.bar.x : 0
             y: room.bar ? room.bar.y : 0
             height: room.bar ? room.bar.h : 0
-            width: room.bar ? Math.min(room.bar.w, room.rx - room.gap - room.bar.x) : 0
+            width: room.bar ? Math.max(0, Math.min(room.bar.w, room.rx - room.gap - room.bar.x)) : 0
+            clip: true
             visible: img.status === Image.Ready
+            // gone by the end of the first shove (the old and new icons only
+            // overlap briefly)
+            opacity: room.fade * (1 - Math.max(0, Math.min(1, (room.progress - 0.1) / 0.45)))
             Image {
                 id: img
-                anchors.fill: parent
+                width: room.bar ? room.bar.w : 0
+                height: room.bar ? room.bar.h : 0
                 fillMode: Image.Stretch
                 cache: false
                 smooth: true

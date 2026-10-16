@@ -3,7 +3,7 @@
 
   chat.py info                     JSON: merged settings, backend info, theme, environment
   chat.py sessions                 JSON list of recent chats
-  chat.py bridge <session|new> <cwd> <model> <fork 0|1>
+  chat.py bridge <session|new> <cwd> <model> <fork 0|1> [mode]
                                    run a chat (protocol in docs/PROTOCOL.md)
   chat.py summary <transcript> [backend]
                                    JSON {title, last} for balloon messages
@@ -66,7 +66,7 @@ def main():
     elif cmd == "sessions":
         print(json.dumps(backends.load(cfg).sessions()))
     elif cmd == "bridge" and len(a) >= 5:
-        backends.load(cfg).bridge(a[1], a[2], a[3], a[4])
+        backends.load(cfg).bridge(a[1], a[2], a[3], a[4], a[5] if len(a) > 5 else "")
     elif cmd == "summary" and len(a) >= 2:
         s = backends.load(cfg, a[2] if len(a) > 2 and a[2] else None).summary(a[1])
         last = re.sub(r"[*_`#>]+", "", s.get("last") or "").strip().replace("\n", " ")
