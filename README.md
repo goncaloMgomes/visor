@@ -4,6 +4,8 @@ A small robot in a space helmet that lives in the corner of your Wayland desktop
 
 It works with **Claude Code** and **any OpenAI-compatible API**: OpenAI, OpenRouter, Gemini, Mistral, Groq, and local models through Ollama, LM Studio or llama.cpp. Adding another AI is a small adapter ([docs/PROTOCOL.md](docs/PROTOCOL.md)).
 
+<video src="docs/visor-demo.mp4" width="720" autoplay muted loop playsinline controls></video>
+
 <img src="docs/in-the-bar.png" alt="The robot at the end of a bar" width="420">
 
 | | | | | |
