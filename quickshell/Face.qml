@@ -1019,17 +1019,6 @@ Item {
                             radius: 1
                             color: root.accent
                         }
-                        Shape {
-                            anchors.fill: parent
-                            preferredRendererType: Shape.CurveRenderer
-                            visible: root.charging
-                            z: 2
-                            ShapePath {
-                                strokeColor: "#0b1322"; strokeWidth: 0.8
-                                fillColor: "#ffffff"
-                                PathSvg { path: "M25 12.5 L20.5 18.6 L23.6 18.6 L22.4 23.5 L27.2 17 L24 17 Z" }
-                            }
-                        }
                         Rectangle {
                             x: 14.5; y: 14.5
                             height: 7

@@ -87,7 +87,7 @@ Whether it's day or night is decided when the message is said, from that day's s
 
 | | Face | When | Looks like |
 |:-:|---|---|---|
-| <img src="gifs/battery.gif" width="120"> | **battery** | Laptops only (the battery is found automatically). Only briefly (3.5 s): when the charger is plugged in or removed, when the level drops past 20 %, 10 % or 5 %, and every 5 minutes while it's at 20 % or below on battery. | A battery icon in the visor with the level and a ⚡ while charging. Green while charging or above 40 %, amber from 21 % to 40 %, red at 20 % or below (blinking). |
+| <img src="gifs/battery.gif" width="120"> | **battery** | Laptops only (the battery is found automatically). Only briefly (3.5 s): when the charger is plugged in or removed, when the level drops past 20 %, 10 % or 5 %, and every 5 minutes while it's at 20 % or below on battery. | A battery icon in the visor with the level. Green while charging or above 40 %, amber from 21 % to 40 %, red at 20 % or below (blinking). |
 
 ---
 
