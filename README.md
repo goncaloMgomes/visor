@@ -13,6 +13,8 @@ It works with **Claude Code** and **any OpenAI-compatible API**: OpenAI, OpenRou
 
 All the faces and what triggers them: [docs/faces.md](docs/faces.md).
 
+<img src="docs/chat-empty.png" alt="The chat popup, empty, with ambient indigo light" width="320"> <img src="docs/chat-reply.png" alt="A reply with a code block" width="320">
+
 ## What it does
 
 - **Follows your AI.** Moods come from adapters: Claude Code hooks, the Codex CLI notify script, or `visor signal` from anything else. When a long task finishes or needs approval, a speech balloon tells you, and clicking it opens that chat.
