@@ -1,0 +1,29 @@
+{
+  "name": "",
+  "backend": "claude-code",
+  "theme": "auto",
+
+  "chat": {
+    "model": "",
+    "cwd": "~",
+    "permissionMode": "default",
+    "computerUse": false,
+    "shareScreen": true
+  },
+
+  "position": { "marginTop": 0, "marginRight": 0, "chatTop": 46, "chatRight": 8 },
+
+  "service": { "unit": "", "label": "" },
+
+  "features": { "weather": true, "remarks": true, "workspacePreview": false },
+
+  "backends": {
+    "openai": {
+      "name": "Assistant",
+      "baseUrl": "https://api.openai.com/v1",
+      "apiKeyEnv": "OPENAI_API_KEY",
+      "defaultModel": "",
+      "models": []
+    }
+  }
+}

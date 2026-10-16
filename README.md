@@ -1,0 +1,91 @@
+# Visor 🤖
+
+A small robot in a space helmet that lives in the corner of your Wayland desktop. It shows what your AI tools are doing (thinking, working, waiting for you, done), chats with you in a popup that can see your screen, and reacts to everything else on the computer: music, battery, Wi-Fi, USB, the weather, and you petting it with the mouse.
+
+It works with **Claude Code** and **any OpenAI-compatible API**: OpenAI, OpenRouter, Gemini, Mistral, Groq, and local models through Ollama, LM Studio or llama.cpp. Adding another AI is a small adapter ([docs/PROTOCOL.md](docs/PROTOCOL.md)).
+
+<img src="docs/in-the-bar.png" alt="The robot at the end of a bar" width="420">
+
+| | | | | |
+|:-:|:-:|:-:|:-:|:-:|
+| <img src="docs/gifs/idle.gif" width="100"><br>idle | <img src="docs/gifs/thinking.gif" width="100"><br>thinking | <img src="docs/gifs/working.gif" width="100"><br>working | <img src="docs/gifs/input.gif" width="100"><br>needs you | <img src="docs/gifs/done.gif" width="100"><br>done |
+| <img src="docs/gifs/pet.gif" width="100"><br>petting | <img src="docs/gifs/music.gif" width="100"><br>music | <img src="docs/gifs/rainy.gif" width="100"><br>weather | <img src="docs/gifs/battery.gif" width="100"><br>battery | <img src="docs/gifs/sleep.gif" width="100"><br>you're away |
+
+All the faces and what triggers them: [docs/faces.md](docs/faces.md).
+
+## What it does
+
+- **Follows your AI.** Moods come from adapters: Claude Code hooks, the Codex CLI notify script, or `visor signal` from anything else. When a long task finishes or needs approval, a speech balloon tells you, and clicking it opens that chat.
+- **Chat popup.** Click the robot. Replies stream in, tool calls fold into one line, and permission requests and questions appear as buttons. It sees a screenshot of what you were doing (you can turn that off). There's a model picker and a list of recent chats.
+- **Optional computer use** on Hyprland: the AI can click, type and switch windows for you, asking first.
+- **Lives with you.** It bops along to music (MPRIS), gets sleepy at night, naps when you're away, greets you with the weather, and notices chargers, Bluetooth headphones, USB devices and volume changes. With the AI's help, its remarks are freshly written every few hours.
+- **Light.** About 11 % of one CPU core while animating, with no daemons beyond Quickshell.
+
+## Install
+
+Needs a Wayland compositor with layer-shell (Hyprland, Sway, niri, river, Plasma…), [Quickshell](https://quickshell.org) and Python 3. Optional: `jq` (Claude Code hook), `grim` (screenshots), `curl` (weather), `brightnessctl`, and `wtype` (computer use).
+
+```sh
+git clone https://github.com/goncalomgomes/visor && cd visor
+./install.sh                 # → ~/.local/share/visor and ~/.local/bin/visor
+visor doctor                 # what works on this machine
+visor setup claude-code      # if you use Claude Code: adds the hooks (backs up settings.json)
+visor                        # start it
+```
+
+Arch: `packaging/arch/PKGBUILD` (AUR package `visor-git`).
+
+To start it with your desktop, use `systemctl --user enable --now visor.service`, or `exec-once = visor` (Hyprland) / `exec visor` (Sway). See [docs/hyprland.md](docs/hyprland.md) for placement, brightness keys and the Hyprland extras.
+
+## Configure
+
+`~/.config/visor/config.json` (created by `visor setup config`). Only include what you change; every option and its default is in [`backend/common.py`](backend/common.py).
+
+```json
+{
+  "name": "Sam",
+  "backend": "claude-code",
+  "chat": { "model": "sonnet", "permissionMode": "default", "computerUse": false },
+  "position": { "marginTop": 0, "marginRight": 64 }
+}
+```
+
+| Key | What |
+|---|---|
+| `name` | your name in greetings |
+| `backend` | `claude-code` or `openai` (configure it under `backends.openai`, see [PROTOCOL.md](docs/PROTOCOL.md#included)) |
+| `theme` | `auto` (the backend's own), `neutral`, `claude`, or a path to your own JSON (see `themes/`); `themeOverrides` changes single colours |
+| `chat.permissionMode` | Claude Code's mode for popup chats: `default` asks before acting, `acceptEdits`, `auto`, `plan` |
+| `chat.computerUse` | let the chat AI drive the desktop (Hyprland, opt-in) |
+| `chat.shareScreen` | take a screenshot when the popup opens (the chip in the composer turns it off per message) |
+| `service` | `{ "unit": "x.service", "label": "X" }`: the robot sleeps while that systemd user unit is stopped, and a click starts it |
+| `features` | `weather`, `remarks` (AI-written balloon lines), `workspacePreview` |
+| `night`, `idleSeconds`, `lockers`, `power` | sleepy hours, the away timer, screen lockers to watch for, battery names (`auto`) |
+
+The weather city and the speech balloons switch are in the right-click menu. Changes to the config file apply right away.
+
+## Commands
+
+```
+visor [start] | stop | restart | log
+visor ipc chat | say TEXT | menu | curious | city NAME | …     drive it from scripts
+visor signal <mood> | --event start|stop|ask|error …          report what an AI tool is doing
+visor setup config | claude-code [--remove] | codex
+visor doctor
+```
+
+## Privacy
+
+Nothing leaves your computer except:
+
+- **chat messages**, sent to the AI you configured, with a screenshot when sharing is on;
+- **the weather city**, sent to wttr.in;
+- **the AI-written lines**: a short prompt with the time of day and the weather, sent to your AI every 2.5 hours (`features.remarks: false` turns it off).
+
+## Uninstall
+
+`./uninstall.sh` (add `--purge` to delete your config and chats too). It also removes the Claude Code hooks.
+
+## License
+
+MIT. Visor is an independent project and isn't affiliated with Anthropic, OpenAI or any other AI provider. The optional `claude` theme only imitates the colours of Claude's apps for people who use them.

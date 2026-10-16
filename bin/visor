@@ -1,0 +1,29 @@
+#!/bin/sh
+# Visor: a little robot for your desktop that shows what your AI is up to.
+#
+#   visor [start]            run it (only one at a time)
+#   visor stop | restart
+#   visor log                its log
+#   visor ipc <fn> [args]    drive it: chat, say TEXT, menu, curious, … (see docs)
+#   visor signal …           tell it what an AI tool is doing (docs/PROTOCOL.md)
+#   visor setup …            config | claude-code [--remove] | codex
+#   visor doctor             check what's installed and configured
+set -e
+ROOT=$(dirname "$(dirname "$(readlink -f "$0")")")
+QML="$ROOT/quickshell"
+PY="${VISOR_PYTHON:-python3}"
+
+cmd="${1:-start}"
+[ $# -gt 0 ] && shift
+case "$cmd" in
+    start)   exec qs -n -p "$QML" "$@" ;;
+    stop)    qs kill -p "$QML" >/dev/null 2>&1 || true ;;
+    restart) qs kill -p "$QML" >/dev/null 2>&1 || true; sleep 0.5; exec qs -n -d -p "$QML" ;;
+    log)     exec qs log -p "$QML" "$@" ;;
+    ipc)     exec qs ipc -p "$QML" call robot "$@" ;;
+    signal)  exec "$PY" "$ROOT/backend/visor_signal.py" "$@" ;;
+    setup)   exec "$PY" "$ROOT/backend/visor_setup.py" "$@" ;;
+    doctor)  exec "$PY" "$ROOT/backend/doctor.py" "$@" ;;
+    -h|--help|help) sed -n '2,11s/^# \{0,1\}//p' "$0" ;;
+    *) echo "visor: unknown command '$cmd' (try visor help)" >&2; exit 2 ;;
+esac
