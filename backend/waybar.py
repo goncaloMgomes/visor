@@ -177,7 +177,13 @@ def right_margin(bar):
 
 
 def need(cfg):
-    return ROBOT_W + int(cfg.get("position", {}).get("marginRight", 0))
+    return ROBOT_W
+
+
+def placed(cfg):
+    """The user moved the robot themselves (`position`): leave the bar alone."""
+    p = cfg.get("position", {})
+    return bool(p.get("marginRight", 0) or p.get("marginTop", 0))
 
 
 # --- where the bar is on screen (for the animation) -------------------------
@@ -224,7 +230,7 @@ def status():
     if bars:
         rights = [right_margin(b) for b in bars]
         st["right"] = min(r for r, _ in rights)
-        st["needsRoom"] = st["right"] < st["need"]
+        st["needsRoom"] = st["right"] < st["need"] and not placed(cfg)
         # without Hyprland the bar's place comes from its config (if it has a height)
         b = rights[0][1]
         box = css_box(b["margin"]) if "margin" in b and "margin-top" not in b and "margin-left" not in b else \

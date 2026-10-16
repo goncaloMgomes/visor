@@ -25,10 +25,10 @@ All the faces and what triggers them: [docs/faces.md](docs/faces.md).
 
 ## Install
 
-Needs a Wayland compositor with layer-shell (Hyprland, Sway, niri, river, Plasma…), [Quickshell](https://quickshell.org) and Python 3. Optional: the Inter font (`inter-font` on Arch), `jq` (Claude Code hook), `grim` (screenshots), `curl` (weather), `brightnessctl`, and `wtype` (computer use).
+Needs a Wayland compositor with layer-shell (Hyprland, Sway, niri, river, Plasma…), [Quickshell](https://quickshell.org) and Python 3. Optional: the Inter font (`inter-font` on Arch), a Nerd Font for the system-event icons (`ttf-nerd-fonts-symbols-mono`), `jq` (Claude Code hook), `grim` (screenshots), `curl` (weather), `brightnessctl`, and `wtype` (computer use).
 
 ```sh
-git clone https://github.com/goncalomgomes/visor && cd visor
+git clone https://github.com/goncaloMgomes/visor && cd visor
 ./install.sh                 # → ~/.local/share/visor and ~/.local/bin/visor
 visor doctor                 # what works on this machine
 visor setup claude-code      # if you use Claude Code: adds the hooks (backs up settings.json)
@@ -66,7 +66,7 @@ To start it with your desktop, use `systemctl --user enable --now visor.service`
 | `chat.computerUse` | let the chat AI drive the desktop (Hyprland, opt-in) |
 | `chat.shareScreen` | take a screenshot when the popup opens (the chip in the composer turns it off per message) |
 | `service` | `{ "unit": "x.service", "label": "X" }`: the robot sleeps while that systemd user unit is stopped, and a click starts it |
-| `waybar.makeRoom` | on the first start, shove Waybar over to make room (`false` to leave the bar alone) |
+| `waybar.makeRoom` | on the first start, shove Waybar over to make room (`false` to leave the bar alone; it also leaves it alone once you set `position`) |
 | `features` | `weather`, `remarks` (AI-written balloon lines), `workspacePreview` |
 | `night`, `idleSeconds`, `lockers`, `power` | sleepy hours, the away timer, screen lockers to watch for, battery names (`auto`) |
 

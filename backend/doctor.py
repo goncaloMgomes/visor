@@ -39,8 +39,11 @@ def main():
     tool("brightnessctl", "brightness reactions (scripts/sysevent.sh)")
     if shutil.which("fc-list"):
         import subprocess
-        has_inter = "Inter" in subprocess.run(["fc-list", ":", "family"], capture_output=True, text=True).stdout
+        fams = subprocess.run(["fc-list", ":", "family"], capture_output=True, text=True).stdout
+        has_inter = "Inter" in fams
         line(OK if has_inter else WARN, "Inter font" if has_inter else "Inter font not found: the popups fall back to the default sans")
+        has_nerd = "Nerd Font" in fams
+        line(OK if has_nerd else WARN, "Nerd Font" if has_nerd else "no Nerd Font: the Wi-Fi/Bluetooth/USB icons won't show (ttf-nerd-fonts-symbols-mono)")
 
     print("Desktop")
     hypr = bool(os.environ.get("HYPRLAND_INSTANCE_SIGNATURE"))

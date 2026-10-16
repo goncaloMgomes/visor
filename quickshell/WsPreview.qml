@@ -210,7 +210,7 @@ PanelWindow {
                         opacity: 0.85
                         elide: Text.ElideRight
                         horizontalAlignment: Text.AlignHCenter
-                        font.family: "CaskaydiaMono Nerd Font"
+                        font.family: Style.mono
                         font.pixelSize: 12
                     }
                 }

@@ -1,6 +1,6 @@
 [Unit]
 Description=Visor, a desktop robot that shows what your AI is up to
-Documentation=https://github.com/goncalomgomes/visor
+Documentation=https://github.com/goncaloMgomes/visor
 PartOf=graphical-session.target
 After=graphical-session.target
 Requisite=graphical-session.target

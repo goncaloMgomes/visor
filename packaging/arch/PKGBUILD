@@ -1,14 +1,15 @@
-# Maintainer: Gonçalo Gomes <goncalo98gomes at gmail dot com>
+# Maintainer: Gonçalo Gomes <45539115+goncaloMgomes at users dot noreply dot github dot com>
 pkgname=visor-git
 _pkgname=visor
 pkgver=0.1.0
 pkgrel=1
 pkgdesc="A little robot for your Wayland desktop that shows what your AI is up to, with a chat popup (Claude Code, OpenAI-compatible APIs, local models)"
 arch=('any')
-url="https://github.com/goncalomgomes/visor"
+url="https://github.com/goncaloMgomes/visor"
 license=('MIT')
 depends=('quickshell' 'python')
 optdepends=('inter-font: the popups\' typeface'
+            'ttf-nerd-fonts-symbols-mono: icons for system events'
             'jq: Claude Code hook'
             'grim: let the chat see your screen'
             'curl: weather'

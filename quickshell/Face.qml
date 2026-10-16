@@ -1070,7 +1070,7 @@ Item {
                             text: root.sysGlyph
                             color: root.accent
                             opacity: root.sysOn || root.sysKind === "vol" ? 1 : 0.55
-                            font.family: "CaskaydiaMono Nerd Font Mono"
+                            font.family: "Symbols Nerd Font Mono"   // icons; any Nerd Font works too
                             font.pixelSize: 22
                             scale: root.sysBump
                             rotation: root.sysKind === "usb" ? -root.sysWobble * 12 : 0
