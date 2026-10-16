@@ -44,6 +44,7 @@ ShellRoot {
                 try { shell.info = JSON.parse(this.text) } catch (e) { console.warn("visor: chat.py info failed:", this.text); return }
                 Style.theme = shell.info.theme
                 Style.reducedMotion = shell.info.reducedMotion
+                if (!shell.roomChecked && !roomCheck.running) roomCheck.running = true
             }
         }
     }
@@ -79,6 +80,38 @@ ShellRoot {
             chat.shotSerial++
             chat.open = true
         }
+    }
+
+    // --- room in Waybar ---------------------------------------------------------
+    // The first time it starts next to a Waybar with no room at its right end,
+    // the robot shoves the bar over (MakeRoom.qml, backend/waybar.py). It stays
+    // hidden until that's been checked, so it doesn't appear on top of the bar.
+    property bool roomChecked: false
+    property bool roomForced: false
+    Process {
+        id: roomCheck
+        command: [shell.backendDir + "/waybar.py", "status"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                let st = null
+                try { st = JSON.parse(this.text) } catch (e) {}
+                const want = st && st.running && st.needsRoom
+                             && (shell.roomForced || (!st.done && shell.cfg.waybar?.makeRoom !== false))
+                shell.roomForced = false
+                if (want) roomAnim.start(st)
+                shell.roomChecked = true
+            }
+        }
+        onExited: code => { if (code !== 0) shell.roomChecked = true }
+    }
+    MakeRoom {
+        id: roomAnim
+        screen: faceWin.screen
+        helper: shell.backendDir + "/waybar.py"
+        runDir: shell.runDir
+        finalX: (faceWin.screen ? faceWin.screen.width : 1920) - faceWin.margins.right - faceWin.implicitWidth
+        finalY: faceWin.margins.top
+        onFinished: changed => { if (changed) balloon.say("Made myself a little room. Hi! 👋", { ms: 6000 }) }
     }
 
     // --- the service the robot "is" (optional) ----------------------------
@@ -218,6 +251,8 @@ ShellRoot {
         function remote(): string { return shell.remoteOn ? "on" : "off" }
         function sys(kind: string, on: bool, level: real): void { face.sysEvent(kind, on, level) }
         function curious(): void { face.curious() }
+        // squeeze into Waybar now (`visor setup waybar`), even if it was done before
+        function makeRoom(): void { if (!roomAnim.active && !roomCheck.running) { shell.roomForced = true; roomCheck.running = true } }
         function city(name: string): void { shell.setCity(name) }
         // a line from the AI-written pool ("" = none), e.g. aiLine plugged 42
         function aiLine(kind: string, arg: string): string {
@@ -906,7 +941,7 @@ ShellRoot {
     PanelWindow {
         id: faceWin
         // step aside for fullscreen windows (videos, games)
-        visible: !shell.fullscreen
+        visible: !shell.fullscreen && shell.roomChecked
 
         anchors {
             top: true
@@ -929,6 +964,9 @@ ShellRoot {
 
         Item {
             id: holder
+            // while it squeezes into Waybar, MakeRoom draws it (transparent
+            // rather than unmapped: no compositor fade to catch in the snapshot)
+            opacity: roomAnim.active ? 0 : 1
             x: 0; y: 3
             width: 52 * shell.zoom
             height: 40 * shell.zoom

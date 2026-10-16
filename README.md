@@ -37,6 +37,10 @@ visor                        # start it
 
 Arch: `packaging/arch/PKGBUILD` (AUR package `visor-git`).
 
+The first time it starts next to a Waybar with no room for it, the robot makes some: it squeezes in from the screen edge and shoves the end of the bar over. That sets `"margin-right"` on your bar, tagged with a `/* visor */` comment and backed up first. `visor setup waybar --remove` gives the room back.
+
+<img src="docs/gifs/make-room.gif" alt="The robot shoving the end of Waybar over to make room" width="400">
+
 To start it with your desktop, use `systemctl --user enable --now visor.service`, or `exec-once = visor` (Hyprland) / `exec visor` (Sway). See [docs/hyprland.md](docs/hyprland.md) for placement, brightness keys and the Hyprland extras.
 
 ## Configure
@@ -62,6 +66,7 @@ To start it with your desktop, use `systemctl --user enable --now visor.service`
 | `chat.computerUse` | let the chat AI drive the desktop (Hyprland, opt-in) |
 | `chat.shareScreen` | take a screenshot when the popup opens (the chip in the composer turns it off per message) |
 | `service` | `{ "unit": "x.service", "label": "X" }`: the robot sleeps while that systemd user unit is stopped, and a click starts it |
+| `waybar.makeRoom` | on the first start, shove Waybar over to make room (`false` to leave the bar alone) |
 | `features` | `weather`, `remarks` (AI-written balloon lines), `workspacePreview` |
 | `night`, `idleSeconds`, `lockers`, `power` | sleepy hours, the away timer, screen lockers to watch for, battery names (`auto`) |
 
@@ -77,7 +82,7 @@ The popups are styled entirely from design tokens: colours, fonts, radii, which 
 visor [start] | stop | restart | log
 visor ipc chat | say TEXT | menu | curious | city NAME | …     drive it from scripts
 visor signal <mood> | --event start|stop|ask|error …          report what an AI tool is doing
-visor setup config | claude-code [--remove] | codex
+visor setup config | claude-code [--remove] | codex | waybar [--remove]
 visor doctor
 ```
 
@@ -91,7 +96,7 @@ Nothing leaves your computer except:
 
 ## Uninstall
 
-`./uninstall.sh` (add `--purge` to delete your config and chats too). It also removes the Claude Code hooks.
+`./uninstall.sh` (add `--purge` to delete your config and chats too). It also removes the Claude Code hooks and gives Waybar its room back.
 
 ## License
 

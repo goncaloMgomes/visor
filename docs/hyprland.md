@@ -15,7 +15,7 @@ Visor runs on any Wayland compositor that supports the layer-shell protocol (Hyp
 
 ## Placing the robot
 
-By default it sits in the top-right corner of the screen. If a bar is there, either leave room for it in the bar (for Waybar, a `"margin-right": 64` on the bar) or move the robot with `position` in `~/.config/visor/config.json`:
+By default it sits in the top-right corner of the screen. If Waybar is there, the robot makes room for itself the first time it starts (it sets `"margin-right": 64` on the bar and restarts Waybar; `visor setup waybar --remove` undoes it). With another bar, leave room for it in the bar or move the robot with `position` in `~/.config/visor/config.json`:
 
 ```json
 "position": { "marginTop": 0, "marginRight": 0, "chatTop": 46, "chatRight": 8 }

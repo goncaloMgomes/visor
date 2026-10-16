@@ -5,10 +5,14 @@
   visor setup claude-code         add the hooks to ~/.claude/settings.json (backup first)
   visor setup claude-code --remove
   visor setup codex               how to add the notify script to ~/.codex/config.toml
+  visor setup waybar              make room for the robot at the end of Waybar (it does
+                                  this by itself the first time; this does it again)
+  visor setup waybar --remove     give the room back, and don't take it again
 """
 import json
 import os
 import shutil
+import subprocess
 import sys
 import time
 
@@ -78,6 +82,22 @@ def config():
     print(f"wrote {CONFIG_FILE}; edit it, then `visor restart`")
 
 
+def waybar(remove):
+    helper = os.path.join(ROOT, "backend", "waybar.py")
+    if remove:
+        r = json.loads(subprocess.run([helper, "remove"], capture_output=True, text=True).stdout)
+        print(f"gave the room back in {r['config']}" if r["changed"] else "nothing to undo")
+        return
+    # the robot does it with its little shove when it's running
+    ipc = subprocess.run(["qs", "ipc", "-p", os.path.join(ROOT, "quickshell"), "call", "robot", "makeRoom"],
+                         capture_output=True, text=True)
+    if ipc.returncode == 0:
+        print("watch the top-right corner")
+        return
+    r = json.loads(subprocess.run([helper, "make-room"], capture_output=True, text=True).stdout)
+    print(r.get("error") or ("made room in Waybar" if r.get("changed") else "Waybar already has room"))
+
+
 def main():
     a = sys.argv[1:]
     what = a[0] if a else ""
@@ -85,6 +105,8 @@ def main():
         claude_code("--remove" in a)
     elif what == "codex":
         codex()
+    elif what == "waybar":
+        waybar("--remove" in a)
     elif what == "config":
         config()
     else:

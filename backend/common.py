@@ -63,8 +63,11 @@ DEFAULTS = {
         "workspacePreview": False,   # Hyprland + Waybar dots only; see docs/hyprland.md
     },
 
-    # Waybar layout, for the workspace preview only
-    "waybar": {"marginLeft": 10, "marginRight": 64, "top": 6, "height": 34, "dot": 18, "activeDot": 38},
+    # Waybar: makeRoom = the first time, shove the bar over to make room for the
+    # robot (sets the bar's margin-right; `visor setup waybar --remove` undoes it).
+    # The rest is the bar's layout, for the workspace preview only.
+    "waybar": {"makeRoom": True,
+               "marginLeft": 10, "marginRight": 64, "top": 6, "height": 34, "dot": 18, "activeDot": 38},
 
     "backends": {
         "claude-code": {

@@ -6,7 +6,7 @@
 #   visor log                its log
 #   visor ipc <fn> [args]    drive it: chat, say TEXT, menu, curious, … (see docs)
 #   visor signal …           tell it what an AI tool is doing (docs/PROTOCOL.md)
-#   visor setup …            config | claude-code [--remove] | codex
+#   visor setup …            config | claude-code [--remove] | codex | waybar [--remove]
 #   visor doctor             check what's installed and configured
 set -e
 ROOT=$(dirname "$(dirname "$(readlink -f "$0")")")
