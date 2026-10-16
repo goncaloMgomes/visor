@@ -13,12 +13,21 @@ ROOT=$(dirname "$(dirname "$(readlink -f "$0")")")
 QML="$ROOT/quickshell"
 PY="${VISOR_PYTHON:-python3}"
 
+# Run the robot in its own systemd scope (when there is one), so it doesn't belong
+# to whatever started it: stopping that service or terminal would kill it too.
+scoped() {
+    if command -v systemd-run >/dev/null 2>&1 && [ -d "${XDG_RUNTIME_DIR:-/nonexistent}/systemd" ]; then
+        exec systemd-run --user --scope --collect --quiet "$@"
+    fi
+    exec "$@"
+}
+
 cmd="${1:-start}"
 [ $# -gt 0 ] && shift
 case "$cmd" in
-    start)   exec qs -n -p "$QML" "$@" ;;
+    start)   scoped qs -n -p "$QML" "$@" ;;
     stop)    qs kill -p "$QML" >/dev/null 2>&1 || true ;;
-    restart) qs kill -p "$QML" >/dev/null 2>&1 || true; sleep 0.5; exec qs -n -d -p "$QML" ;;
+    restart) qs kill -p "$QML" >/dev/null 2>&1 || true; sleep 0.5; scoped qs -n -d -p "$QML" ;;
     log)     exec qs log -p "$QML" "$@" ;;
     ipc)     exec qs ipc -p "$QML" call robot "$@" ;;
     signal)  exec "$PY" "$ROOT/backend/visor_signal.py" "$@" ;;

@@ -288,8 +288,13 @@ def restart(old):
         t = time.time()
         while time.time() - t < 3 and any(os.path.exists(f"/proc/{p['pid']}") for p in old):
             time.sleep(0.05)
+        # its own systemd scope, so the new bar doesn't belong to whatever ran us:
+        # stopping that (a service, a terminal) would otherwise take the bar down too
+        scope = ["systemd-run", "--user", "--scope", "--collect", "--quiet"] \
+            if shutil.which("systemd-run") and os.path.isdir(os.path.join(
+                os.environ.get("XDG_RUNTIME_DIR", "/nonexistent"), "systemd")) else []
         for p in old:
-            subprocess.Popen(p["argv"], cwd=p["cwd"], start_new_session=True,
+            subprocess.Popen(scope + p["argv"], cwd=p["cwd"], start_new_session=True,
                              stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     pids = {p["pid"] for p in old}
     t = time.time()
