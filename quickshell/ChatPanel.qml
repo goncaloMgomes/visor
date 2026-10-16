@@ -754,12 +754,10 @@ PanelWindow {
             ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
             onCountChanged: positionViewAtEnd()
             // new messages fade up 8 px (history loads without animating)
-            // fade in only: animating y left rows at stale positions (overlapping)
-            // whenever a row above grew while the animation ran
-            add: Transition {
-                enabled: panel.historyDone && !Style.reducedMotion
-                Motion { property: "opacity"; from: 0; to: 1 }
-            }
+            // New rows fade in by themselves (see the delegate). Not with the
+            // view's add transition: an interrupted one left a reply stuck at
+            // opacity 0 (there, but invisible), and animating y left rows
+            // overlapping when a row above grew.
 
             // mouse wheel notches start a flick, so they use the same physics as a
             // drag (no fighting with the built-in wheel); touchpads keep their own scrolling
@@ -822,9 +820,21 @@ PanelWindow {
 
             delegate: Item {
                 id: row
+                required property int index
                 required property string role
                 required property string text
                 required property string items
+                // a row that just arrived fades in; its own animation, which
+                // nothing else can interrupt, and always ends fully visible
+                NumberAnimation on opacity {
+                    id: fadeIn
+                    running: false
+                    from: 0; to: 1
+                    duration: Style.standard
+                    easing.type: Easing.BezierSpline; easing.bezierCurve: Style.expoOut
+                    onStopped: row.opacity = 1
+                }
+                Component.onCompleted: if (panel.historyDone && !Style.reducedMotion && index === messages.count - 1) fadeIn.start()
                 readonly property bool mine: role === "user"
                 readonly property var tools: role === "tools" ? JSON.parse(items) : []
                 readonly property var summary: role === "tools" ? panel.groupSummary(tools) : null
