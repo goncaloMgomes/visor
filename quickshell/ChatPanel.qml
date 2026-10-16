@@ -35,6 +35,27 @@ PanelWindow {
     Timer { id: disarm; interval: 3000; onTriggered: panel.stopArmed = false }
 
     readonly property string shotPath: runDir + "/screen.jpg"
+    // Screen off: the AI can't see the screen at all. The snapshot moves to a
+    // file it isn't told about (the chip still shows it), and the desktop
+    // screenshot tool refuses while runDir/screen-off exists.
+    readonly property string hiddenShotPath: runDir + "/screen-hidden.jpg"
+    property int shareSerial: 0
+    Process {
+        id: shareProc
+        onExited: panel.shareSerial++
+    }
+    function applyShare() {
+        if (!runDir) return
+        shareProc.running = false
+        shareProc.command = ["sh", "-c", shareScreen
+            ? 'r="$1"; rm -f "$r/screen-off"; [ -e "$r/screen-hidden.jpg" ] && mv -f "$r/screen-hidden.jpg" "$r/screen.jpg"; true'
+            : 'r="$1"; mkdir -p "$r"; touch "$r/screen-off"; [ -e "$r/screen.jpg" ] && mv -f "$r/screen.jpg" "$r/screen-hidden.jpg"; true',
+            "sh", runDir]
+        shareProc.running = true
+    }
+    onShareScreenChanged: applyShare()
+    onShotSerialChanged: if (!shareScreen) applyShare()   // a new snapshot while sharing is off
+    onRunDirChanged: applyShare()
 
     // current conversation
     property string sessionId: ""        // "" = new chat
@@ -1047,7 +1068,7 @@ PanelWindow {
                     horizontalAlignment: Text.AlignHCenter
                     wrapMode: Text.Wrap
                     text: panel.backend.available === false ? "Run `visor doctor` in a terminal to see what's missing."
-                        : panel.shotOk && panel.shareScreen ? "I can see what you were doing on screen."
+                        : panel.shotOk && panel.shareScreen ? "I can look at your screen if I need to."
                         : "Ask me anything."
                     color: Style.muted
                     font.family: Style.sans; font.pixelSize: 13
@@ -1468,7 +1489,7 @@ PanelWindow {
                                 anchors.verticalCenter: parent.verticalCenter
                                 Image {
                                     anchors.fill: parent
-                                    source: panel.shotOk ? "file://" + panel.shotPath + "?" + panel.shotSerial : ""
+                                    source: panel.shotOk ? "file://" + (panel.shareScreen ? panel.shotPath : panel.hiddenShotPath) + "?" + panel.shotSerial + "-" + panel.shareSerial : ""
                                     cache: false
                                     asynchronous: true
                                     fillMode: Image.PreserveAspectCrop
@@ -1492,8 +1513,8 @@ PanelWindow {
                         }
                         Tip {
                             visible: chipHover.containsMouse
-                            text: panel.shareScreen ? panel.aiName + " can see this screenshot (click to stop sharing)"
-                                                    : "Screenshot not shared (click to share)"
+                            text: panel.shareScreen ? panel.aiName + " can look at your screen when it needs to (click to turn off)"
+                                                    : panel.aiName + " can't see your screen (click to allow)"
                         }
                     }
                 }

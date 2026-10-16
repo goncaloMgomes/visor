@@ -18,7 +18,7 @@ All the faces and what triggers them: [docs/faces.md](docs/faces.md).
 ## What it does
 
 - **Follows your AI.** Moods come from adapters: Claude Code hooks, the Codex CLI notify script, or `visor signal` from anything else. When a long task finishes or needs approval, a speech balloon tells you, and clicking it opens that chat.
-- **Chat popup.** Click the robot. Replies stream in, tool calls fold into one line, and permission requests and questions appear as buttons. It sees a screenshot of what you were doing (you can turn that off). There's a model picker, a permission-mode switch (Ask, Edits, Auto, Plan) and a list of recent chats.
+- **Chat popup.** Click the robot. Replies stream in, tool calls fold into one line, and permission requests and questions appear as buttons. It can look at what you were doing on screen when a question needs it, and only then (the Screen chip turns that off completely). There's a model picker, a permission-mode switch (Ask, Edits, Auto, Plan) and a list of recent chats.
 - **Optional computer use** on Hyprland: the AI can click, type and switch windows for you, asking first.
 - **Lives with you.** It bops along to music (MPRIS), gets sleepy at night, naps when you're away, greets you with the weather, and notices chargers, Bluetooth headphones, USB devices and volume changes. With the AI's help, its remarks are freshly written every few hours.
 - **Light.** About 11 % of one CPU core while animating, with no daemons beyond Quickshell.
@@ -58,7 +58,7 @@ To start it with your desktop, use `systemctl --user enable --now visor.service`
 | `reducedMotion` | turn animations off (also automatic when the desktop's "enable animations" setting is off) |
 | `chat.permissionMode` | Claude Code's mode for popup chats: `default` asks before acting, `acceptEdits`, `auto`, `plan` |
 | `chat.computerUse` | let the chat AI drive the desktop (Hyprland, opt-in) |
-| `chat.shareScreen` | take a screenshot when the popup opens (the chip in the composer turns it off per message) |
+| `chat.shareScreen` | let the AI look at your screen when it needs to (`false` = never; the Screen chip in the composer turns it off for the moment) |
 | `service` | `{ "unit": "x.service", "label": "X" }`: the robot sleeps while that systemd user unit is stopped, and a click starts it |
 | `waybar.makeRoom` | on the first start, shove Waybar over to make room (`false` to leave the bar alone; it also leaves it alone once you set `position`) |
 | `features` | `weather`, `remarks` (AI-written balloon lines) |
@@ -84,7 +84,7 @@ visor doctor
 
 Nothing leaves your computer except:
 
-- **chat messages**, sent to the AI you configured, with a screenshot when sharing is on;
+- **chat messages**, sent to the AI you configured, plus a screenshot only when the AI decides it needs to look and sharing is on;
 - **the weather city**, sent to wttr.in;
 - **the AI-written lines**: a short prompt with the time of day and the weather, sent to your AI every 2.5 hours (`features.remarks: false` turns it off).
 

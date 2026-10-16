@@ -30,13 +30,16 @@ def popup_prompt(computer_use):
          "animated robot face in a corner of their Linux desktop. The popup is narrow "
          "(about 420-600px), so keep answers short and skimmable. Each message may start "
          "with a <desktop-context> block naming the focused window and, when the user "
-         "shares it, a screenshot of what they were doing when the popup opened; use it "
-         "whenever the question is about what is on screen.")
+         "shares their screen, where to find a screenshot of what they were doing when "
+         "the popup opened. Looking at a screenshot is slow and costly: only look when "
+         "the question can't be answered without seeing the screen. If the context has "
+         "no screenshot, the user turned screen sharing off: don't try to see the screen.")
     if computer_use:
-        p += (" You can also use the computer: the `desktop` tools take screenshots and "
-              "drive the mouse and keyboard (click, type, key, scroll, drag) and list/focus/"
-              "launch windows. Use them when the user asks you to do something on screen; "
-              "take a screenshot first and another after acting to check the result. The "
+        p += (" You can also use the computer: the `desktop` tools list/focus/launch windows, "
+              "drive the mouse and keyboard (click, type, key, scroll, drag) and take "
+              "screenshots. Prefer the tools that don't need the screen (windows, focus, "
+              "launch, key) and take a screenshot only when you have to see something, e.g. "
+              "to find where to click or to check a result you can't verify otherwise. The "
               "chat popup closes when the user clicks elsewhere, so tell them what you're "
               "about to do before taking over the mouse.")
     return p
@@ -86,7 +89,7 @@ def desktop_context(c):
     if c.get("window"):
         ctx.append(f"Focused window: {c['window']}")
     if c.get("screenshot") and os.path.exists(c["screenshot"]):
-        ctx.append(f"Screenshot of the screen when the popup opened: {c['screenshot']}")
+        ctx.append(f"Screenshot of the screen when the popup opened (look only if needed): {c['screenshot']}")
     return ("<desktop-context>\n" + "\n".join(ctx) + "\n</desktop-context>\n\n") if ctx else ""
 
 

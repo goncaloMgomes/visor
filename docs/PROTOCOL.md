@@ -114,7 +114,7 @@ Add `backend/backends/<name>.py` with a `Backend(cfg)` class and register it in 
 
 | `op` | Fields | Meaning |
 |---|---|---|
-| `send` | `text`, `screenshot` (path or ""), `window` | a message from the user |
+| `send` | `text`, `screenshot` (path or ""), `window` | a message from the user. `screenshot` is the screen when the popup opened (empty when sharing is off); give it to the model only when it asks (a tool), not with every message |
 | `stop` | | interrupt the reply |
 | `model` | `model` | switch model (also mid-chat) |
 | `mode` | `mode` | switch permission mode (an `id` from `modes`; also mid-chat) |

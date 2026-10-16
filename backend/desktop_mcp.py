@@ -146,7 +146,12 @@ MOUSE = Mouse()
 
 # --- tools -------------------------------------------------------------------------
 
+SCREEN_OFF = os.path.join(os.environ.get("XDG_RUNTIME_DIR") or "/tmp", "visor", "screen-off")
+
+
 def t_screenshot(a):
+    if os.path.exists(SCREEN_OFF):   # the popup's Screen switch
+        return "The user turned screen sharing off in the chat popup, so you can't see the screen. Ask them to describe it."
     m = monitor()
     geo = None
     if a.get("window") == "focused":

@@ -26,7 +26,14 @@ from backends.base import (DESKTOP_MCP, desktop_context, emit, popup_prompt, rem
 
 CHATS = os.path.join(STATE_DIR, "chats")
 MAX_STEPS = 25                     # tool rounds per message
-READ_ONLY_TOOLS = {"screenshot", "windows"}
+READ_ONLY_TOOLS = {"screenshot", "windows", "view_screen"}
+# the screenshot taken when the popup opened, for the model to look at only when it needs to
+VIEW_SCREEN = {"type": "function", "function": {
+    "name": "view_screen",
+    "description": "Look at a screenshot of the user's screen taken when the chat popup opened (what they "
+                   "were doing). Slow and costly: use it only when the question can't be answered without "
+                   "seeing the screen.",
+    "parameters": {"type": "object", "properties": {}}}}
 
 
 # ------------------------------------------------------------------ MCP client (desktop tools)
@@ -147,6 +154,7 @@ class Api:
 # ------------------------------------------------------------------ one chat
 class Bridge:
     def __init__(self, be, session, cwd, model, fork, mode=""):
+        self.shot = ""   # this turn's popup screenshot (view_screen)
         self.be = be
         self.api = Api(be.opts)
         self.model = model if model in be.model_ids() else be.default_model()
@@ -194,6 +202,8 @@ class Bridge:
             a = json.loads(args or "{}") if isinstance(args, str) else (args or {})
         except ValueError:
             a = {}
+        if name == "view_screen":
+            return dict(tool_event("view_screen", a), text="Looked at your screen")
         return tool_event("mcp__desktop__" + name.replace("desktop__", ""), a)
 
     # -- a turn: runs in its own thread so stop/permit keep working
@@ -217,25 +227,25 @@ class Bridge:
         msgs = self.chat["messages"]
         content = desktop_context({"window": c.get("window")}) + text
         msgs.append({"role": "user", "content": content, "shown": text})
-        user_idx = len(msgs) - 1   # the screenshot goes with this message
         self.chat["model"] = self.model
         self.save()
 
-        tools = None
+        tools = []
         if self.computer:
             if not self.mcp:
                 self.mcp = Mcp(DESKTOP_MCP)
             tools = self.mcp.openai_tools()
+        # the popup's screenshot, only when the model asks for it
+        self.shot = c.get("screenshot") if self.be.opts.get("vision", True) else ""
+        if self.shot and os.path.exists(self.shot):
+            tools = tools + [VIEW_SCREEN]
+        tools = tools or None
 
-        shot = c.get("screenshot") if self.be.opts.get("vision", True) else ""
         extra_images = []          # this turn's images (not saved)
         for step in range(MAX_STEPS):
             req = [{"role": "system", "content": self.system()}]
             for i, m in enumerate(msgs):
-                m = {k: v for k, v in m.items() if k != "shown"}
-                if i == user_idx and shot and os.path.exists(shot):
-                    m["content"] = [{"type": "text", "text": m["content"]}, image_part(shot)]
-                req.append(m)
+                req.append({k: v for k, v in m.items() if k != "shown"})
             req += extra_images
             mid = f"{self.chat['id']}-{len(msgs)}"
 
@@ -259,7 +269,7 @@ class Bridge:
                 result, images = self.run_tool(tc)
                 msgs.append({"role": "tool", "tool_call_id": tc["id"], "content": result})
                 if images and self.be.opts.get("vision", True):
-                    extra_images = [{"role": "user", "content": [{"type": "text", "text": "(the screenshot the tool took)"}]
+                    extra_images = [{"role": "user", "content": [{"type": "text", "text": "(the screenshot from the tool)"}]
                                      + [{"type": "image_url", "image_url": {"url": f"data:{mt};base64,{d}"}} for d, mt in images]}]
                 if self.stopping:
                     break
@@ -276,6 +286,11 @@ class Bridge:
             return "error: the arguments weren't valid JSON", []
         ev = self.tool_ev(name, args)
         emit(ev)
+        if name == "view_screen":
+            if not (self.shot and os.path.exists(self.shot)):
+                return "There's no screenshot (the user turned screen sharing off).", []
+            with open(self.shot, "rb") as f:
+                return "Here is the screenshot.", [(base64.b64encode(f.read()).decode(), "image/jpeg")]
         if self.ask and name not in READ_ONLY_TOOLS:
             rid = "p" + uuid.uuid4().hex[:8]
             wait = [threading.Event(), None]
@@ -323,11 +338,6 @@ class Bridge:
         if self.mcp:
             self.mcp.close()
 
-
-def image_part(path):
-    with open(path, "rb") as f:
-        data = base64.b64encode(f.read()).decode()
-    return {"type": "image_url", "image_url": {"url": "data:image/jpeg;base64," + data}}
 
 
 # ------------------------------------------------------------------ backend
