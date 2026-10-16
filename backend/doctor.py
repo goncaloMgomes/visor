@@ -50,7 +50,7 @@ def main():
     wl = bool(os.environ.get("WAYLAND_DISPLAY"))
     line(OK if wl else BAD, "Wayland session" if wl else "not a Wayland session: Quickshell needs one")
     line(OK if hypr else WARN, "Hyprland" if hypr else
-         "not Hyprland: click-outside-to-close, fullscreen hiding via workspaces, workspace previews "
+         "not Hyprland: click-outside-to-close, fullscreen hiding via workspaces "
          "and computer use are off; everything else works")
     bat, ac = power_supplies()
     line(OK if bat else WARN, f"battery {bat}" + (f", charger {ac}" if ac else "") if bat else "no battery found (fine on a desktop)")

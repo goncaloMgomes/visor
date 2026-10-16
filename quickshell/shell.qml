@@ -351,9 +351,7 @@ ShellRoot {
             if (p.length < 3) return
             const x = parseFloat(p[0]), y = parseFloat(p[1]), c = parseInt(p[2])
             face.cursorX = x; face.cursorY = y; face.cursorAt = Date.now()
-            const wp = wsLoader.item
-            if (wp) { wp.pointerX = x; wp.pointerY = y }
-            if (shell.clicks >= 0 && c > shell.clicks) { if (wp) wp.clicked(); shell.clicked(x, y) }
+            if (shell.clicks >= 0 && c > shell.clicks) shell.clicked(x, y)
             shell.clicks = c
         }
     }
@@ -361,18 +359,6 @@ ShellRoot {
     Process {
         running: shell.hypr && shell.info !== null && !shell.info.env.hyprlandLua
         command: [Quickshell.shellDir + "/../extras/hyprland/pointer.py"]
-    }
-
-    // preview of a workspace's windows when hovering its dot in Waybar
-    // (Hyprland + Waybar + the pointer file; features.workspacePreview)
-    LazyLoader {
-        id: wsLoader
-        active: shell.hypr && shell.features.workspacePreview === true
-        WsPreview {
-            blocked: shell.fullscreen || chat.open || remoteMenu.open
-            bar: shell.cfg.waybar ?? ({})
-            lua: shell.info ? shell.info.env.hyprlandLua : false
-        }
     }
 
     function clicked(x, y) {

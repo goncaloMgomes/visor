@@ -102,7 +102,7 @@ From highest to lowest priority:
 5. **Everyday state** while the AI is idle: *sleep* if you're away, *music* if something is playing.
 6. **idle**, the normal face (sleepier at night).
 
-The robot hides itself when something is fullscreen (videos, games, a screensaver). The chat, the menu and the workspace previews close too.
+The robot hides itself when something is fullscreen (videos, games, a screensaver). The chat and the menu close too.
 
 ---
 
@@ -136,25 +136,6 @@ A white cartoon speech bubble with an ink outline and a tail pointing at the rob
 - **Speech balloons** on/off.
 - **Weather city**: type "City, Country" and press Enter. Weather comes from [wttr.in](https://wttr.in); without a city there's none.
 - With a service configured: its status, and **Start / Restart / Stop** (Restart and Stop ask for a second click).
-
----
-
-## Workspace previews
-
-<img src="workspace-preview.png" alt="Hovering a workspace dot shows its windows" width="420">
-
-**Hyprland + Waybar only, off by default** (`features.workspacePreview`, see [hyprland.md](hyprland.md)).
-
-**Rest the mouse on a workspace dot** in the middle of Waybar for a moment and a card drops down with a live picture of every window on that workspace (even a workspace you're not on), each with its title. Thumbnails have rounded corners and a cyan border on hover.
-
-- **Slide along the dots** and the card follows, switching workspace instantly.
-- **The card stays** while the mouse is on it, so you can move down to it.
-- **Click a thumbnail** to jump to that window. The cursor stays where you clicked (Hyprland would otherwise move it to the window).
-- **Any click** on a dot or the card closes the preview until the mouse leaves the dots.
-- Several windows sit side by side and shrink if the row gets too wide.
-- Not shown in fullscreen, or while the chat or menu is open.
-
-Waybar can't report hover, so the robot works out where each dot is from Waybar's layout (the `waybar` block of the config) and compares that with the mouse position.
 
 ---
 

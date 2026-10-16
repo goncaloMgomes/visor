@@ -15,7 +15,7 @@
 
   "service": { "unit": "", "label": "" },
 
-  "features": { "weather": true, "remarks": true, "workspacePreview": false },
+  "features": { "weather": true, "remarks": true },
 
   "backends": {
     "openai": {

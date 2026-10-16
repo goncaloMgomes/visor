@@ -9,7 +9,6 @@ Visor runs on any Wayland compositor that supports the layer-shell protocol (Hyp
 | Click outside the chat or menu to close it | ✓ | Esc, ✕ or clicking the robot |
 | Eyes follow the mouse | ✓ | – |
 | Curious look when you click elsewhere | with the Lua snippet | – |
-| Workspace previews under Waybar's dots | opt-in | – |
 | Computer use (the AI drives mouse and keyboard) | opt-in | – |
 | Screenshot shared with the chat | ✓ (grim) | wlroots-based ones (grim) |
 
@@ -44,17 +43,6 @@ bindel = , XF86MonBrightnessDown, exec, ~/.local/share/visor/scripts/sysevent.sh
 ```
 
 For a keep-awake toggle, call `sysevent.sh caffeine on` / `off` from it.
-
-## Workspace previews (Hyprland + Waybar)
-
-Hovering a workspace dot in Waybar shows live thumbnails of that workspace's windows. Waybar can't report hover, so the robot works out where the dots are from your bar's layout. Turn it on and describe the layout:
-
-```json
-"features": { "workspacePreview": true },
-"waybar": { "marginLeft": 10, "marginRight": 64, "top": 6, "height": 34, "dot": 18, "activeDot": 38 }
-```
-
-`dot` and `activeDot` are the widths of a dot and of the active one, including their margins. It expects the dots centred in the bar: one for workspace 1, and one for each existing workspace from 2 to 10. Set `"tooltip": false` on the workspace modules so Waybar's tooltips don't cover the preview.
 
 ## Computer use
 

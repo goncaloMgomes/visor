@@ -1,5 +1,5 @@
 -- Visor: the mouse position and clicks for the robot (eyes that follow the
--- mouse, curious looks after clicks, workspace previews). For Hyprland
+-- mouse, curious looks after clicks). For Hyprland
 -- configured in Lua: add this to hyprland.lua (or `require` it).
 -- Writes "x y clicks" to $XDG_RUNTIME_DIR/visor/pointer, every 100 ms while it changes.
 local VISOR_PTR = (os.getenv("XDG_RUNTIME_DIR") or "/tmp") .. "/visor/pointer"

@@ -61,7 +61,7 @@ To start it with your desktop, use `systemctl --user enable --now visor.service`
 | `chat.shareScreen` | take a screenshot when the popup opens (the chip in the composer turns it off per message) |
 | `service` | `{ "unit": "x.service", "label": "X" }`: the robot sleeps while that systemd user unit is stopped, and a click starts it |
 | `waybar.makeRoom` | on the first start, shove Waybar over to make room (`false` to leave the bar alone; it also leaves it alone once you set `position`) |
-| `features` | `weather`, `remarks` (AI-written balloon lines), `workspacePreview` |
+| `features` | `weather`, `remarks` (AI-written balloon lines) |
 | `night`, `idleSeconds`, `lockers`, `power` | sleepy hours, the away timer, screen lockers to watch for, battery names (`auto`) |
 
 The weather city and the speech balloons switch are in the right-click menu. Changes to the config file apply right away.
