@@ -1,10 +1,13 @@
+
+
+
 # Visor 🤖
 
 A small robot in a space helmet that lives in the corner of your Wayland desktop. It shows what your AI tools are doing (thinking, working, waiting for you, done), chats with you in a popup that can see your screen, and reacts to everything else on the computer: music, battery, Wi-Fi, USB, the weather, and you petting it with the mouse.
 
 It works with **Claude Code** and **any OpenAI-compatible API**: OpenAI, OpenRouter, Gemini, Mistral, Groq, and local models through Ollama, LM Studio or llama.cpp. Adding another AI is a small adapter ([docs/PROTOCOL.md](docs/PROTOCOL.md)).
 
-<video src="docs/visor-demo.mp4" width="720" autoplay muted loop playsinline controls></video>
+https://github.com/user-attachments/assets/c9e1ed1a-7d31-4f99-b424-fa3b8ff7ec65
 
 <img src="docs/in-the-bar.png" alt="The robot at the end of a bar" width="420">
 
