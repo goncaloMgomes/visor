@@ -1,7 +1,7 @@
 import QtQuick
 
 // The design system's label: small mono capitals, widely spaced.
-// For section tags and metadata ("RECENTS", "ESC TO STOP"); named Caption (QtQuick.Controls has a Label).
+// For section tags and metadata ("RECENTS", "SHIFT+ESC TO STOP"); named Caption (QtQuick.Controls has a Label).
 Text {
     color: Style.muted
     font.family: Style.mono

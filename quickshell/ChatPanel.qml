@@ -638,7 +638,13 @@ PanelWindow {
             }
         }
 
-        Keys.onEscapePressed: { if (panel.modelMenuOpen || panel.modeMenuOpen) { panel.modelMenuOpen = false; panel.modeMenuOpen = false } else panel.open = false }
+        Keys.onEscapePressed: event => {
+            if ((event.modifiers & Qt.ShiftModifier) && panel.busy) panel.stop()
+            else if (panel.modelMenuOpen || panel.modeMenuOpen) { panel.modelMenuOpen = false; panel.modeMenuOpen = false }
+            else panel.open = false
+        }
+
+        Shortcut { sequence: "Ctrl+N"; enabled: panel.open; onActivated: panel.newChat() }
 
         // header: spark, session title (opens the picker), actions
         Item {
@@ -821,7 +827,7 @@ PanelWindow {
                     }
                     Caption {
                         visible: !panel.ask0
-                        text: "esc to stop"
+                        text: "shift+esc to stop"
                         anchors.verticalCenter: parent.verticalCenter
                     }
                 }
@@ -1383,9 +1389,10 @@ PanelWindow {
                             if (event.modifiers & Qt.ShiftModifier) event.accepted = false
                             else panel.send()
                         }
+                        // Esc closes (menus first, then the popup); Shift+Esc stops the AI
                         Keys.onEscapePressed: event => {
-                            if (panel.modelMenuOpen || panel.modeMenuOpen) { panel.modelMenuOpen = false; panel.modeMenuOpen = false }
-                            else if (panel.busy) panel.stop()
+                            if ((event.modifiers & Qt.ShiftModifier) && panel.busy) panel.stop()
+                            else if (panel.modelMenuOpen || panel.modeMenuOpen) { panel.modelMenuOpen = false; panel.modeMenuOpen = false }
                             else panel.open = false
                         }
                     }
