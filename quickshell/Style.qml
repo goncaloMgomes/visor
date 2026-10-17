@@ -31,6 +31,9 @@ Singleton {
     readonly property color line: theme.line || "#0fffffff"
     readonly property color lineHi: theme.lineHi || "#1affffff"
     readonly property color lineAccent: theme.lineAccent || "#4d5e6ad2"
+    // the chat panel's outer edge (default: the same hairline as everything else)
+    readonly property color panelBorder: theme.panelBorder || line
+    readonly property color panelBorderHi: theme.panelBorderHi || lineHi
     readonly property color onAccent: theme.onAccent || "#ffffff"
     readonly property color ok: theme.ok || "#4cc38a"
     readonly property color bad: theme.bad || "#eb5757"

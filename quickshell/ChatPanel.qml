@@ -318,7 +318,7 @@ PanelWindow {
         try { ev = JSON.parse(line) } catch (e) { return }
         if (historyDone && ["text", "tool", "turn_end"].includes(ev.type)) touch()
         switch (ev.type) {
-        case "reset": messages.clear(); streamRows = {}; historyDone = false; break
+        case "reset": messages.clear(); streamRows = {}; historyDone = false; view.follow = true; break
         case "user": {   // history only: live messages are shown when sent
             const i = echoes.indexOf(norm(ev.text))
             if (i >= 0) echoes.splice(i, 1)
@@ -329,9 +329,7 @@ PanelWindow {
             const r = streamRows[ev.id]
             if (r === undefined) streamRows[ev.id] = addRow("assistant", ev.text)
             else {
-                const stick = view.atYEnd   // follow the reply unless you scrolled up
                 messages.setProperty(r, "text", messages.get(r).text + ev.text)
-                if (stick) view.positionViewAtEnd()
             }
             activity = ""
             break
@@ -416,14 +414,13 @@ PanelWindow {
                 const items = JSON.parse(messages.get(n - 1).items)
                 items.push(t)
                 messages.setProperty(n - 1, "items", JSON.stringify(items))
-                view.positionViewAtEnd()
                 return n - 1
             }
             messages.append({ role: "tools", text: "", items: JSON.stringify([t]) })
         } else {
+            if (role === "user") view.follow = true   // sending brings you back down
             messages.append({ role: role, text: text, items: "[]" })
         }
-        view.positionViewAtEnd()
         return messages.count - 1
     }
 
@@ -626,7 +623,7 @@ PanelWindow {
             radius: Style.radius
             color: "transparent"
             border.width: 1
-            border.color: frameHover.hovered ? Style.lineHi : Style.line
+            border.color: frameHover.hovered ? Style.panelBorderHi : Style.panelBorder
             Behavior on border.color { ColorMotion { duration: Style.standard } }
         }
         Rectangle {   // light catching the top edge
@@ -751,8 +748,20 @@ PanelWindow {
             model: messages
             opacity: panel.deciding ? 0 : 1
             boundsBehavior: Flickable.StopAtBounds
-            ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
-            onCountChanged: positionViewAtEnd()
+            ScrollBar.vertical: ScrollBar {
+                policy: ScrollBar.AsNeeded
+                onPressedChanged: view.follow = pressed ? false : view.atYEnd
+            }
+            // Stay at the bottom while anything grows (new rows, streamed text,
+            // rows whose height is only known after layout, the spinner footer),
+            // unless you scrolled up; scrolling back to the end follows again.
+            property bool follow: true
+            function stick() { if (follow && !moving && !dragging) positionViewAtEnd() }
+            onMovementStarted: follow = false
+            onMovementEnded: follow = atYEnd
+            onCountChanged: Qt.callLater(stick)
+            onContentHeightChanged: Qt.callLater(stick)
+            onHeightChanged: Qt.callLater(stick)
             // new messages fade up 8 px (history loads without animating)
             // New rows fade in by themselves (see the delegate). Not with the
             // view's add transition: an interrupted one left a reply stuck at
