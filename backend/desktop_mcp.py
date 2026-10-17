@@ -31,6 +31,23 @@ LUA = os.path.exists(os.path.join(os.environ.get("XDG_CONFIG_HOME") or os.path.e
 
 # --- the screen ----------------------------------------------------------------
 
+def mark_control():
+    """Say that the screen is being driven: the robot shows its screen icon and the
+    Waybar module lights up (both read $XDG_RUNTIME_DIR/visor, see the sys file)."""
+    d = os.path.join(os.environ.get("XDG_RUNTIME_DIR") or "/tmp", "visor")
+    path = os.path.join(d, "control")
+    try:
+        os.makedirs(d, exist_ok=True)
+        was = os.path.getmtime(path) if os.path.exists(path) else 0
+        with open(path, "w") as f:
+            f.write(str(time.time()))
+        if time.time() - was > 3:   # once per burst, not on every call
+            with open(os.path.join(d, "sys"), "a") as f:
+                f.write("screen on\n")
+    except OSError:
+        pass   # decoration only, never a reason to fail a tool call
+
+
 def hyprctl_json(*args):
     out = subprocess.run(["hyprctl", *args, "-j"], capture_output=True, text=True, timeout=5).stdout
     return json.loads(out or "null")
@@ -350,6 +367,7 @@ def handle(req):
         if not fn:
             return send({"jsonrpc": "2.0", "id": rid, "error": {"code": -32602, "message": "unknown tool"}})
         try:
+            mark_control()
             out = fn(p.get("arguments") or {})
             content = out if isinstance(out, list) else [{"type": "text", "text": str(out)}]
             return send({"jsonrpc": "2.0", "id": rid, "result": {"content": content}})

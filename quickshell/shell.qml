@@ -467,6 +467,7 @@ ShellRoot {
             for (const l of lines.slice(shell.sysSeen)) {
                 const p = l.trim().split(" ")
                 if (p[0] === "bright") face.sysEvent("bright", true, parseFloat(p[1]) / 100)
+                else if (p[0] === "screen") face.sysEvent("screen", true, -1)   // an AI is driving the desktop
                 else if (p[0] === "caffeine") {
                     const on = p[1] === "on"
                     face.sysEvent("coffee", on, -1, 2600)

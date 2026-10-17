@@ -229,7 +229,8 @@ Item {
     property real sysLevel: -1
     property int sysSerial: 0
     readonly property color sysColor: ({ wifi: "#4fb8ff", bt: "#6f8cff", btdev: "#6f8cff", vol: "#5ef2d0",
-                                         bright: "#ffd166", usb: "#c3a6ff", coffee: "#e0a96d" })[sysKind] || "#45e3ff"
+                                         bright: "#ffd166", usb: "#c3a6ff", coffee: "#e0a96d",
+                                         screen: "#c026ff" })[sysKind] || "#45e3ff"
     readonly property string sysGlyph: {
         switch (sysKind) {
         case "wifi":   return sysOn ? "\u{f05a9}" : "\u{f05aa}"
@@ -239,6 +240,7 @@ Item {
         case "bright": return sysLevel < 0.5 ? "\u{f00de}" : "\u{f00e0}"
         case "usb":    return "\u{f0553}"
         case "coffee": return sysOn ? "\u{f0176}" : "\u{f04b2}"
+        case "screen": return "\u{f0379}"
         }
         return ""
     }
