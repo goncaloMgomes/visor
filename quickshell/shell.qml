@@ -889,8 +889,11 @@ ShellRoot {
         const key = e.transcript || e.sid || e.title || ""
         if (e.kind === "start") { turnStart[key] = e.t; return }
         if (e.kind === "stop") {
-            if (turnStart[key] !== undefined && e.t - turnStart[key] < 20) return   // quick replies: no shout
-            if (e.transcript && chat.open && chat.transcript === e.transcript) return  // already looking at it
+            const took = turnStart[key] !== undefined ? e.t - turnStart[key] : Infinity
+            if (took < 20) return   // quick replies: no shout
+            // the popup's own chat: you're already there (or just clicked away
+            // from it), so only a long job is worth a shout
+            if (e.transcript && chat.transcript === e.transcript && (chat.open || took < 180)) return
         }
         if (e.kind === "ask") {   // two hooks report the same prompt
             if (lastAsk[key] && e.t - lastAsk[key] < 10) return
