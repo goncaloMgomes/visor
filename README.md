@@ -9,7 +9,6 @@ It works with **Claude Code** and **any OpenAI-compatible API**: OpenAI, OpenRou
 
 https://github.com/user-attachments/assets/c9e1ed1a-7d31-4f99-b424-fa3b8ff7ec65
 
-<img src="docs/in-the-bar.png" alt="The robot at the end of a bar" width="420">
 
 | | | | | |
 |:-:|:-:|:-:|:-:|:-:|
