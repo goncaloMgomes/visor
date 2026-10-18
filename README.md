@@ -7,8 +7,7 @@ A small robot in a space helmet that lives in the corner of your Wayland desktop
 
 It works with **Claude Code** and **any OpenAI-compatible API**: OpenAI, OpenRouter, Gemini, Mistral, Groq, and local models through Ollama, LM Studio or llama.cpp. Adding another AI is a small adapter ([docs/PROTOCOL.md](docs/PROTOCOL.md)).
 
-https://github.com/user-attachments/assets/c9e1ed1a-7d31-4f99-b424-fa3b8ff7ec65
-
+https://github.com/user-attachments/assets/6164ce3a-185b-4fc6-aee3-3009c13d3041
 
 | | | | | |
 |:-:|:-:|:-:|:-:|:-:|
