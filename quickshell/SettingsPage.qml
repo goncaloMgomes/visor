@@ -49,7 +49,7 @@ Item {
         { section: "Chat" },
         { key: "backend", label: "AI", type: "choice",
           options: [{ v: "claude-code", label: "Claude Code" }, { v: "openai", label: "OpenAI-compatible" }] },
-        { key: "chat.model", label: "Model", type: "choice",
+        { key: "chat.model", label: "Default model", type: "choice",
           options: [{ v: "", label: "Default" }].concat((backend.models ?? []).map(m => ({ v: m.id, label: m.name || m.id }))) },
         { key: "chat.permissionMode", label: "Permissions", type: "choice", show: claudeCode,
           options: [{ v: "default", label: "Ask" }, { v: "acceptEdits", label: "Accept edits" },

@@ -18,8 +18,8 @@ import threading
 import time
 
 from common import RUN_DIR
-from backends.base import (CTX_RE, DESKTOP_MCP, desktop_context, emit, json_from_text, popup_prompt,
-                           remember_robot_session, robot_sessions, tool_event)
+from backends.base import (CTX_RE, DESKTOP_MCP, desktop_context, emit, image_data, json_from_text,
+                           popup_prompt, remember_robot_session, robot_sessions, tool_event)
 
 PROJECTS = os.path.expanduser("~/.claude/projects")
 REGISTRY = os.path.expanduser("~/.claude/sessions")
@@ -86,11 +86,16 @@ def events_of(o):
     if t == "system" and o.get("subtype") in ("turn_duration", "stop_hook_summary"):
         return [{"type": "turn_end"}]
     if t == "user" and not o.get("isMeta"):
-        raw = text_of(o.get("message", {}).get("content"))
+        content = o.get("message", {}).get("content")
+        raw = text_of(content)
         if raw.startswith("[Request interrupted"):
             return [{"type": "interrupted"}]
         text = clean_user(raw)
-        return [{"type": "user", "text": text}] if text else []
+        pics = sum(1 for b in content if isinstance(b, dict) and b.get("type") == "image") \
+            if isinstance(content, list) else 0
+        if not text and not pics:
+            return []
+        return [{"type": "user", "text": text, "images": pics}] if pics else [{"type": "user", "text": text}]
     if t == "assistant":
         ev = []
         msg = o.get("message", {})
@@ -183,12 +188,20 @@ class Bridge:
         self.lock = threading.Lock()
         self.req = 0
         self.err = ""
+        # Messages written to Claude that it hasn't read yet, oldest first: True
+        # for those sent mid-reply (queued). Claude replays each one as it reads
+        # it (--replay-user-messages), either folded into the running turn or as
+        # a turn of its own, so a `result` only ends the chat's busy spell once
+        # this is empty.
+        self.inflight = []
+        self.waiting = 0.0       # when a result left queued messages unread
+        self.last_event = time.time()
 
     # -- Claude process
-    def spawn(self):
+    def spawn(self, title=""):
         chat = self.be.cfg["chat"]
         cmd = [self.be.claude(), "-p", "--input-format", "stream-json", "--output-format", "stream-json",
-               "--include-partial-messages", "--verbose",
+               "--include-partial-messages", "--verbose", "--replay-user-messages",
                "--model", self.model, "--permission-mode", self.perm,
                "--permission-prompt-tool", "stdio",
                "--append-system-prompt", popup_prompt(chat.get("computerUse")), "--add-dir", RUN_DIR]
@@ -198,11 +211,13 @@ class Bridge:
             cmd += ["--resume", self.sid]
             if self.fork:
                 cmd.append("--fork-session")
-        else:
-            cmd += ["--name", "Visor · " + time.strftime("%-d %b %H:%M")]
+        elif title:
+            cmd += ["--name", title]
         self.proc = subprocess.Popen(cmd, cwd=self.cwd, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                                      stderr=subprocess.PIPE, text=True, bufsize=1)
         self.fork = False
+        self.inflight = []
+        self.waiting = 0.0
         self.text_n = {}         # message id -> text blocks seen (streamed)
         self.final_n = {}        # message id -> text blocks seen (complete)
         self.msg = ""
@@ -248,6 +263,7 @@ class Bridge:
                 o = json.loads(line)
             except ValueError:
                 continue
+            self.last_event = time.time()
             try:
                 self.handle(o)
             except Exception as e:   # one odd event shouldn't end the chat
@@ -299,8 +315,12 @@ class Bridge:
                     emit({"type": "text", "id": f"{mid}:{k}", "text": b["text"].strip()})
                 elif b.get("type") == "tool_use":
                     emit(tool_event(b.get("name", ""), b.get("input")))
+        elif t == "user":
+            if o.get("isReplay"):   # Claude has read one of our messages
+                self.waiting = 0.0
+                if self.inflight and self.inflight.pop(0):
+                    emit({"type": "consumed"})
         elif t == "result":
-            self.busy = False
             self.last_use = time.time()
             if self.stopping:
                 emit({"type": "interrupted"})
@@ -310,6 +330,10 @@ class Bridge:
             for rid in list(self.pending):
                 emit({"type": "permission_cancel", "id": rid})
             self.pending.clear()
+            if self.inflight:   # a message sent mid-reply gets a turn of its own next
+                self.waiting = time.time()
+                return
+            self.busy = False
             emit({"type": "turn_end"})
         elif t == "control_request":
             rid = o.get("request_id")
@@ -326,19 +350,50 @@ class Bridge:
 
     # -- commands from the popup
     def send(self, c):
+        """A message; `queued` when the popup sent it while Claude was still replying
+        (Claude reads it at its next step), `images` = paths of pasted images."""
         text = str(c.get("text") or "").strip()
-        if not text:
+        images = [p for p in c.get("images") or [] if isinstance(p, str)]
+        if not text and not images:
             return
         prompt = desktop_context(c) + text   # Claude reads the screenshot itself (it's in --add-dir)
+        content = prompt
+        if images:
+            blocks = []
+            for path in images:
+                try:
+                    mt, data = image_data(path)
+                    blocks.append({"type": "image", "source": {"type": "base64", "media_type": mt, "data": data}})
+                except Exception as e:
+                    emit({"type": "error", "text": f"Couldn't attach {os.path.basename(path)}: {e}"})
+            if blocks:
+                content = blocks + ([{"type": "text", "text": prompt}] if prompt else [])
+            elif not text:
+                return
         if not self.proc or self.proc.poll() is not None:
-            self.spawn()
+            # a new chat is named after its first message
+            self.spawn(text.splitlines()[0][:60] if text else "Visor")
         self.busy = True
         self.last_use = time.time()
+        self.inflight.append(bool(c.get("queued")))
         emit({"type": "busy", "value": True})
-        if not self.write({"type": "user", "message": {"role": "user", "content": prompt}}):
-            self.busy = False
+        if not self.write({"type": "user", "message": {"role": "user", "content": content}}):
+            self.inflight.pop()
+            if not self.inflight:
+                self.busy = False
+                emit({"type": "busy", "value": False})
             emit({"type": "error", "text": "Couldn't reach Claude. " + self.err.strip()[-300:]})
-            emit({"type": "busy", "value": False})
+
+    def queue_watch(self):
+        """Don't stay busy forever if a queued message never gets read."""
+        while True:
+            time.sleep(2)
+            if self.waiting and time.time() - max(self.waiting, self.last_event) > 20:
+                self.waiting = 0.0
+                self.inflight = []
+                self.busy = False
+                emit({"type": "error", "text": "Claude didn't pick up the message sent during its reply."})
+                emit({"type": "turn_end"})
 
     def permit(self, c):
         rid = c.get("id")
@@ -369,6 +424,7 @@ class Bridge:
             emit({"type": "reset"})
         emit({"type": "busy", "value": False})
         threading.Thread(target=self.idle_watch, daemon=True).start()
+        threading.Thread(target=self.queue_watch, daemon=True).start()
         for line in sys.stdin:
             try:
                 c = json.loads(line)
@@ -433,7 +489,8 @@ class Backend:
             "modes": [{"id": k, "label": v[0], "tip": v[1]} for k, v in MODES.items()
                       if k != "bypassPermissions" or self.mode() == k],
             "features": {"permissions": True, "questions": True, "terminal": True,
-                         "modelSwitch": True, "recentsFromElsewhere": True},
+                         "modelSwitch": True, "recentsFromElsewhere": True,
+                         "images": True, "queue": True},
             "terminalLabel": "Continue in Claude Code (terminal)",
             "available": bool(shutil.which(self.claude())),
         }

@@ -6,6 +6,8 @@
   chat.py sessions                 JSON list of recent chats
   chat.py bridge <session|new> <cwd> <model> <fork 0|1> [mode]
                                    run a chat (protocol in docs/PROTOCOL.md)
+  chat.py attach <key> <bridge args…>
+                                   the same chat, kept running across robot restarts (relay.py)
   chat.py summary <transcript> [backend]
                                    JSON {title, last} for balloon messages
   chat.py terminal <session> <cwd> JSON argv to continue a chat in a terminal ([] = can't)
@@ -67,6 +69,10 @@ def main():
             set_option(a[1], json.loads(a[2]))
         except (KeyError, ValueError, OSError) as e:
             sys.exit(f"visor: can't set {a[1]}: {e}")
+        return
+    if cmd in ("attach", "relay") and len(a) >= 3:
+        import relay
+        getattr(relay, cmd)(a[1], a[2:])
         return
     cfg = load_config()
     if cmd == "info":

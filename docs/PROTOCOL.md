@@ -69,6 +69,8 @@ Writing a new adapter: map the tool's events onto the moods above. See `hook.sh`
 
 The popup starts `backend/chat.py bridge <session|new> <cwd> <model> <fork 0|1> [mode]` and talks to it in JSON lines. The bridge loads the backend named by `backend` in the config.
 
+It actually starts it through `chat.py attach <tab key> <same args>`: each bridge runs under a relay (`backend/relay.py`) outside the robot's process, so restarting or reloading the robot doesn't end a reply. When a tab comes back, the relay replays the chat so far (between `{"type": "replay", "value": true}` and `…false}` events). `{"op": "quit"}` ends the relay; it also ends after 10 idle minutes with nobody attached. Backends don't need to do anything for this.
+
 ### Included
 
 - **`claude-code`**: runs Claude Code headless (`claude -p`, stream-json). It needs Claude Code installed and logged in (a subscription or an API key). It brings Claude Code's tools, permission prompts and questions. Recents lists every Claude Code session on the machine, and ↗ continues a chat in a terminal.
@@ -108,13 +110,13 @@ Add `backend/backends/<name>.py` with a `Backend(cfg)` class and register it in 
   "available": true }
 ```
 
-`mode` is the configured permission mode; with more than one entry in `modes`, clicking the chip switches between them (the popup remembers the pick and passes it as the bridge's `mode` argument). Set `mode: null` to hide the chip and `models: []` to hide the model picker. `available: false` makes the popup say it isn't set up.
+`features.images` lets the user paste images into the composer; `features.queue` lets them send messages while a reply is running (otherwise the send button stops the reply). `mode` is the configured permission mode; with more than one entry in `modes`, clicking the chip switches between them (the popup remembers the pick and passes it as the bridge's `mode` argument). Set `mode: null` to hide the chip and `models: []` to hide the model picker. `available: false` makes the popup say it isn't set up.
 
 **The bridge.** Commands arrive on stdin, one JSON object per line:
 
 | `op` | Fields | Meaning |
 |---|---|---|
-| `send` | `text`, `screenshot` (path or ""), `window` | a message from the user. `screenshot` is the screen when the popup opened (empty when sharing is off); give it to the model only when it asks (a tool), not with every message |
+| `send` | `text`, `screenshot` (path or ""), `window`, `images`, `queued` | a message from the user. `screenshot` is the screen when the popup opened (empty when sharing is off); give it to the model only when it asks (a tool), not with every message. `images` = paths of images pasted into the composer, to send with the message (feature `images`). `queued` = sent while the reply was still running (feature `queue`): the model reads it at its next step; send `consumed` when it does, and keep `busy` until every message has been answered |
 | `stop` | | interrupt the reply |
 | `model` | `model` | switch model (also mid-chat) |
 | `mode` | `mode` | switch permission mode (an `id` from `modes`; also mid-chat) |
@@ -126,7 +128,8 @@ Events go to stdout, one JSON object per line:
 | `type` | Fields | Meaning |
 |---|---|---|
 | `reset` | | clear the view (sent first, then the history) |
-| `user` | `text` | a past user message (history only) |
+| `user` | `text`, `images` | a past user message (history only); `images` = how many images it had |
+| `consumed` | | the model read the oldest `queued` message (the popup moves it into the conversation) |
 | `delta` | `id`, `text` | a piece of a reply being written |
 | `text` | `id`, `text` | a finished reply block (replaces the deltas with the same `id`) |
 | `tool` | `name`, `text`, `arg`, `code`, `desc`, `add`, `del` | a tool call (`code` = a shell command, shown in a block) |

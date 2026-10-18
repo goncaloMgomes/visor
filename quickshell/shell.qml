@@ -251,6 +251,8 @@ ShellRoot {
             else if (chat.ask0) chat.permit(choice !== "deny", choice === "always")
         }
         function chatNew(): void { chat.newChat() }
+        // keep the chat open while using other windows (toggle)
+        function pin(): void { chat.pinned = !chat.pinned }
         function say(text: string): void { balloon.say(text, { ms: 6000 }) }
         function remoteStart(): void { shell.wakeRemote() }
         function remoteStop(): void { shell.sleepRemote() }
@@ -298,15 +300,15 @@ ShellRoot {
         }
     }
 
-    // keyboard goes to the popup; clicking anywhere else closes it
+    // keyboard goes to the popup; clicking anywhere else closes it (unless pinned)
     // screenshot.sh sets this while slurp picks an area: slurp takes the focus,
     // which would otherwise close the popup before it is captured
     property bool capturing: false
     // (Hyprland only; elsewhere the popup closes with Esc, ✕ or a click on the robot)
     HyprlandFocusGrab {
-        active: shell.hypr && chat.open && !shell.capturing
+        active: shell.hypr && chat.open && !shell.capturing && !chat.pinned
         windows: [chat, faceWin]
-        onCleared: chat.open = false
+        onCleared: if (!chat.pinned) chat.open = false
     }
 
     // --- settings (right-click menu) -------------------------------------------

@@ -95,6 +95,38 @@ def desktop_context(c):
 
 CTX_RE = re.compile(r"<desktop-context>.*?</desktop-context>\s*", re.S)
 
+MAX_IMAGE = 3_700_000   # bytes; base64 grows them by a third and APIs take about 5 MB per image
+IMAGE_SIGS = ((b"\x89PNG", "image/png"), (b"\xff\xd8\xff", "image/jpeg"), (b"GIF8", "image/gif"))
+
+
+def image_data(path):
+    """(media type, base64) for an image pasted into the chat. Anything too big
+    or in a format the APIs don't take is shrunk / converted (needs Pillow)."""
+    with open(path, "rb") as f:
+        raw = f.read()
+    mt = next((m for sig, m in IMAGE_SIGS if raw.startswith(sig)), None)
+    if raw[:4] == b"RIFF" and raw[8:12] == b"WEBP":
+        mt = "image/webp"
+    if mt is None or len(raw) > MAX_IMAGE:
+        try:
+            from PIL import Image
+        except ImportError:
+            raise RuntimeError("too big or an unusual format; install Pillow (python-pillow) to convert it")
+        import io
+        im = Image.open(io.BytesIO(raw))
+        im.thumbnail((2000, 2000))
+        buf = io.BytesIO()
+        if im.mode in ("RGBA", "LA", "P"):
+            im.save(buf, "PNG", optimize=True)
+            mt = "image/png"
+        if not buf.tell() or buf.tell() > MAX_IMAGE:   # no alpha, or a PNG still too big
+            buf = io.BytesIO()
+            im.convert("RGB").save(buf, "JPEG", quality=85)
+            mt = "image/jpeg"
+        raw = buf.getvalue()
+    import base64
+    return mt, base64.b64encode(raw).decode()
+
 
 def robot_sessions():
     try:
